@@ -4,7 +4,7 @@ module.exports = {
     // 对象字面量的大括号内是否要有空格
     bracketSameLine: true,
     // 行结束符使用 UNIX格式
-    endOfLine: 'lf',
+    // endOfLine: 'lf',
     // true:Puts the `>` of a multi-line HTML (JSX) element at the end of the last line instead of being alone on the next line.
     jsxBracketSameLine: false,
     //行宽
