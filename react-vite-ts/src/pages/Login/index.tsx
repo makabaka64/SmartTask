@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, message } from 'antd';
+import { Form, Input, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { fetchRegister, fetchLogin, fetchSendCode } from '@/store/modules/user';
 import { useDispatch } from 'react-redux';
@@ -22,10 +22,10 @@ const Login: React.FC = () => {
     try {
       const email = await form.validateFields(['email']);
       await dispatch(fetchSendCode(email.email));
-      message.success('验证码已发送！');
+      alert('验证码已发送！');
     } catch (err) {
       console.error(err);
-      message.error('请先输入有效的邮箱地址');
+      alert('请先输入有效的邮箱地址');
     }
   };
 
@@ -36,7 +36,7 @@ const Login: React.FC = () => {
           email: values.email,
           password: values.password
         }));
-        message.success('登录成功！');
+        alert('登录成功！');
         navigate('/');
       } else {
         await dispatch(fetchRegister({
@@ -44,13 +44,13 @@ const Login: React.FC = () => {
           password: values.password,
           verificationCode: values.verificationCode!
         }));
-        message.success('注册成功！请使用新账号登录');
+        alert('注册成功！请使用新账号登录');
         setIsLogin(true);
         form.resetFields();
       }
     } catch (error) {
       console.error(error);
-      message.error('操作失败，请重试！');
+      alert((error as Error).message || '操作失败，请重试！');
     }
   };
 

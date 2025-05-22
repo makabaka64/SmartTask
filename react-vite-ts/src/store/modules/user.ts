@@ -4,7 +4,6 @@ import { setToken as _setToken, getToken, removeToken } from '@/utils'
 import type { LoginForm } from '@/types/user'
 import type { AppDispatch } from '@/store'
 import { reguser, login ,sendCode } from '@/apis/user';
-import { message } from 'antd';
 
 const userStore = createSlice({
   name: "user",
@@ -44,7 +43,7 @@ const fetchSendCode = (email: string) => async () => {
   try {
     await sendCode( email )
   } catch {
-    message.error('发送验证码失败')
+    alert('验证码发送失败')
   }
 }
 
@@ -53,7 +52,7 @@ const fetchRegister = (RegisterForm:LoginForm) => {
   return async () => {
     const res = await reguser(RegisterForm)
     if (res.status !== 0) {
-      message.error('注册失败')
+      throw new Error('注册失败，请检查邮箱或验证码');
     }
   }
 }
@@ -62,8 +61,9 @@ const fetchRegister = (RegisterForm:LoginForm) => {
 const fetchLogin = (LoginForm:LoginForm) => {
   return async (dispatch:AppDispatch) => {
     const res = await login(LoginForm)
-    console.log(res);
-    
+    if (res.status !== 0) {
+      throw new Error('登录失败，请检查邮箱或密码');
+    }
     dispatch(setToken(res.token))
   }
 }
