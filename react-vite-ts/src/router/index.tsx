@@ -1,11 +1,11 @@
 import { lazy, Suspense } from "react";
-import {
-  BrowserRouter as Router,
+import { 
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import useAuthCheck from "@/hooks/useAuth";
+import useAuth from "@/hooks/useAuth";
+import Loading from "@/components/Loading";
 
 // 懒加载页面组件
 const Login = lazy(() => import("@/pages/Login"));
@@ -14,13 +14,12 @@ const TaskDetail = lazy(() => import("@/pages/TaskDetail"));
 const Report = lazy(() => import("@/pages/Report"));
 const Profile = lazy(() => import("@/pages/Profile"));
 
-// 路由组件封装
 const AppRouter = () => {
-  const isAuthenticated = useAuthCheck();
+  const isAuthenticated = useAuth();
 
   return (
-    <Router>
-      <Suspense fallback={<div>页面加载中...</div>}>
+   
+      <Suspense fallback={<Loading />}>
         <Routes>
           <Route
             path="/"
@@ -46,7 +45,7 @@ const AppRouter = () => {
           <Route path="*" element={<div>页面不存在</div>} />
         </Routes>
       </Suspense>
-    </Router>
+   
   );
 };
 

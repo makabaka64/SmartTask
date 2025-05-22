@@ -1,13 +1,12 @@
-import { Button } from "antd";
+import { MantineProvider } from '@mantine/core';
+import AppRouter from './router';
+import './index.scss';
 
 function App() {
-  const a = '123';
   return (
-    <>
-      <h1>智能任务管理平台</h1>
-      <Button type="primary">Primary Button</Button>
-      <Button type="default">{a}</Button>
-    </>
+    <MantineProvider>
+      <AppRouter />
+    </MantineProvider>
   );
 }
 

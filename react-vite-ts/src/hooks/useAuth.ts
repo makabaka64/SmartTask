@@ -1,8 +1,11 @@
-function useAuth() {
-  const user = { name: "John Doe" }; // Simulated user data
-  const isAuthenticated = true; // Simulated authentication status
+import { getToken } from "@/utils/token";
 
-  return { user, isAuthenticated };
-}
+/**
+ * 检查是否存在 token，返回是否已登录
+ */
+const useAuth = (): boolean => {
+  return !!getToken();
+};
 
 export default useAuth;
+
