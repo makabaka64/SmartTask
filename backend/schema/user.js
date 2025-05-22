@@ -11,6 +11,7 @@ const password = joi
     const verificationCode = joi.string().required()
     const nickname = joi.string().required()
     const avater_url = joi.string().dataUri().required()
+    const id = joi.number().integer().min(1).required()
 
 
     exports.reg_schema = {
