@@ -13,6 +13,7 @@ const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const TaskDetail = lazy(() => import("@/pages/TaskDetail"));
 const Report = lazy(() => import("@/pages/Report"));
 const Profile = lazy(() => import("@/pages/Profile"));
+const NotFound = lazy(() => import("@/pages/NotFound"))
 
 const AppRouter = () => {
   const isAuthenticated = useAuth();
@@ -25,6 +26,7 @@ const AppRouter = () => {
             path="/"
             element={
               <Navigate to={isAuthenticated ? "/dashboard" : "/login"} />
+              // <Dashboard />
             }
           />
 
@@ -42,7 +44,7 @@ const AppRouter = () => {
           )}
 
           {/* 404 页面 */}
-          <Route path="*" element={<div>页面不存在</div>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
    
