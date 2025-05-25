@@ -12,3 +12,5 @@ router.post('/userinfo', expressJoi(update_userinfo_schema), userinfo_handler.up
 router.post('/updatepwd', expressJoi(update_password_schema), userinfo_handler.updateUserPwd)
 // 更新头像
 router.post('/update/avatar', expressJoi(update_avatar_schema), userinfo_handler.updateUserAvatar)
+
+module.exports = router
