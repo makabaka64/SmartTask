@@ -8,7 +8,7 @@ const request = axios.create({
   headers: {
     'Content-Type': 'application/json' 
   }
-})
+}) 
 
 // 请求拦截器
 request.interceptors.request.use((config) => {
@@ -28,8 +28,7 @@ request.interceptors.response.use((response) => {
   console.dir(error)
   if (error.response.status === 401) {
     removeToken()
-    
-    window.location.reload()
+    alert('登录过期，请重新登录')
   }
   return Promise.reject(error)
 })

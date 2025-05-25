@@ -16,6 +16,7 @@ const Profile = lazy(() => import("@/pages/Profile"));
 const NotFound = lazy(() => import("@/pages/NotFound"))
 
 const AppRouter = () => {
+  
   const isAuthenticated = useAuth();
 
   return (
