@@ -19,7 +19,7 @@
     min-width: 300px;
     height: 100px;
     margin: 0 auto;
-    margin-top: 100px;
+    margin-top: 20vh;
     border-bottom: 2px solid #000;
     .bear{
       margin: 0 auto;
@@ -38,7 +38,8 @@
     margin: 0 auto;
     padding: 0 20px;
     .title{
-      font-size: 26px;
+      font-size: 28px;
+      font-weight: bold;
       height: 48px;
       line-height: 48px;
     }
@@ -47,7 +48,7 @@
         margin-top: 5px;
         li{
           font-size: 14px;
-          margin-left: 20px;
+          margin-left: 24px;
           height: 24px;
           line-height: 24px;
         }
