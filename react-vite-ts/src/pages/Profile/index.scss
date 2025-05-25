@@ -1,0 +1,173 @@
+.profile-container {
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+
+  .profile-content {
+    max-width: 800px;
+    margin: 0 auto;
+
+    .profile-tabs {
+      .ant-tabs-nav {
+        margin-bottom: 1.5rem;
+        
+        &::before {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .ant-tabs-tab {
+          color: rgba(0, 0, 0, 0.65);
+          transition: all 0.3s ease;
+
+          &:hover {
+            color: #1890ff;
+          }
+
+          .anticon {
+            margin-right: 8px;
+          }
+        }
+
+        .ant-tabs-tab-active {
+          .ant-tabs-tab-btn {
+            color: #1890ff;
+          }
+        }
+      }
+    }
+
+    .profile-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(8px);
+      transition: transform 0.3s ease;
+
+      &:hover {
+        transform: translateY(-5px);
+      }
+
+      .avatar-section {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+
+        .avatar-wrapper {
+          position: relative;
+          cursor: pointer;
+          border-radius: 50%;
+          overflow: hidden;
+
+          .ant-avatar {
+            border: 4px solid #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          }
+
+          .avatar-mask {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+
+            .anticon {
+              font-size: 24px;
+              margin-bottom: 8px;
+            }
+          }
+
+          &:hover .avatar-mask {
+            opacity: 1;
+          }
+        }
+      }
+
+      .profile-form {
+        max-width: 400px;
+        margin: 0 auto;
+
+        .ant-form-item {
+          margin-bottom: 24px;
+        }
+
+        .ant-input-affix-wrapper {
+          border-radius: 8px;
+          transition: all 0.3s ease;
+
+          &:hover, &:focus {
+            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+          }
+        }
+
+        .ant-btn {
+          height: 42px;
+          font-size: 1rem;
+          font-weight: 600;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+          }
+        }
+      }
+
+      .log-table {
+        .ant-table {
+          background: transparent;
+        }
+
+        .ant-table-thead > tr > th {
+          background: rgba(24, 144, 255, 0.05);
+          color: #1890ff;
+          font-weight: 600;
+        }
+
+        .ant-table-tbody > tr > td {
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .ant-table-tbody > tr:hover > td {
+          background: rgba(24, 144, 255, 0.05);
+        }
+      }
+    }
+  }
+}
+
+// 移动端适配
+@media screen and (max-width: 768px) {
+  .profile-container {
+    padding: 1rem;
+
+    .profile-content {
+      .profile-tabs {
+        .ant-tabs-nav {
+          margin-bottom: 1rem;
+        }
+      }
+
+      .profile-card {
+        .profile-form {
+          padding: 0 1rem;
+        }
+
+        .log-table {
+          .ant-table {
+            font-size: 14px;
+          }
+        }
+      }
+    }
+  }
+} 

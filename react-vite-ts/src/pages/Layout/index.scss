@@ -1,0 +1,163 @@
+.main-layout {
+  min-height: 100vh;
+  background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+
+      .trigger-button {
+        font-size: 18px;
+        color: #1890ff;
+        transition: all 0.3s ease;
+
+        &:hover {
+          color: #40a9ff;
+          transform: scale(1.1);
+        }
+      }
+
+      .logo {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1890ff;
+        background: linear-gradient(120deg, #1890ff, #40a9ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+    }
+
+    .header-right {
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(24, 144, 255, 0.1);
+        }
+
+        .ant-avatar {
+          background: #1890ff;
+        }
+
+        .username {
+          color: #1890ff;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  .sider {
+    position: fixed;
+    left: 0;
+    top: 64px;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    z-index: 999;
+
+    .ant-menu {
+      background: transparent;
+      border-right: none;
+
+      .ant-menu-item {
+        margin: 8px 16px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(24, 144, 255, 0.1);
+        }
+
+        &.ant-menu-item-selected {
+          background: #1890ff;
+          color: white;
+
+          .anticon {
+            color: white;
+          }
+        }
+
+        .anticon {
+          font-size: 18px;
+          color: #1890ff;
+        }
+      }
+    }
+  }
+
+  .content {
+    margin: 64px 0 0 200px;
+    padding: 24px;
+    min-height: calc(100vh - 64px);
+    transition: all 0.3s ease;
+
+    &.collapsed {
+      margin-left: 80px;
+    }
+  }
+
+  .mobile-drawer {
+    .ant-drawer-content-wrapper {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+    }
+
+    .ant-drawer-header {
+      background: transparent;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .ant-drawer-title {
+      color: #1890ff;
+      font-weight: 600;
+    }
+  }
+}
+
+// 移动端适配
+@media screen and (max-width: 768px) {
+  .main-layout {
+    .header {
+      padding: 0 16px;
+
+      .header-left {
+        .logo {
+          font-size: 1.2rem;
+        }
+      }
+    }
+
+    .sider {
+      display: none;
+    }
+
+    .content {
+      margin-left: 0;
+      padding: 16px;
+    }
+  }
+} 
