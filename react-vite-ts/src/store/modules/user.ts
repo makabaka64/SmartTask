@@ -1,16 +1,23 @@
 // 和用户相关的状态管理
 import { createSlice } from '@reduxjs/toolkit'
 import { setToken as _setToken, getToken, removeToken } from '@/utils'
-import type { LoginForm } from '@/types/user'
+import { unwrap } from '@/utils/requestWrapper'
+import type { LoginForm } from '@/types/api'
 import type { AppDispatch } from '@/store'
-import { reguser, login ,sendCode } from '@/apis/user';
+import { reguser, login ,sendCode, getUserInfo } from '@/apis/user';
 
 const userStore = createSlice({
   name: "user",
   // 数据状态
   initialState: {
     token: getToken() || '',
-    userInfo: {}
+    userInfo: {
+      id: 0,   // 初始值改为 number
+      nickname: '',
+      email: '',
+      avater_url: '',
+      create_time: ''
+    }
   },
   // 同步修改方法
   reducers: {
@@ -23,7 +30,7 @@ const userStore = createSlice({
     },
     clearUserInfo (state) {
       state.token = ''
-      state.userInfo = {}
+      state.userInfo = {nickname: '', email: '', avater_url: '', create_time: '',id: 0}
       removeToken()
     }
   }
@@ -32,7 +39,7 @@ const userStore = createSlice({
 
 // 解构出actionCreater
 
-const { setToken,  clearUserInfo } = userStore.actions
+const { setToken, setUserInfo, clearUserInfo } = userStore.actions
 
 // 获取reducer函数
 
@@ -61,20 +68,25 @@ const fetchRegister = (RegisterForm:LoginForm) => {
 const fetchLogin = (LoginForm:LoginForm) => {
   return async (dispatch:AppDispatch) => {
     const res = await login(LoginForm)
+    const data = unwrap(res) 
     if (res.status !== 0) {
       throw new Error('登录失败，请检查邮箱或密码');
     }
-    dispatch(setToken(res.token))
+    dispatch(setToken(data.token))
+    console.log('登录成功，token:', data.token);
+    
   }
 }
 
 // 获取个人用户信息异步方法
 const fetchUserInfo = () => {
   return async (dispatch:AppDispatch) => {
-    console.log(dispatch);
-    
-    // const res = await register()
-    // dispatch(setUserInfo(res.data))
+    const res = await getUserInfo()
+    if (res.status !== 0) {
+      throw new Error('获取用户信息失败');
+    } else {
+      dispatch(setUserInfo(res.data))
+    }
   }
 }
 
