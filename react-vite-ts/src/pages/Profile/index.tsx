@@ -1,85 +1,119 @@
-import React, { useState } from 'react';
-import { Card, Avatar, Input, Button, Form, Table, Tabs, message, Upload } from 'antd';
-import { UserOutlined, LockOutlined, HistoryOutlined, UploadOutlined } from '@ant-design/icons';
+import React, { useState,useEffect } from 'react';
+import { Card, Avatar, Input, Button, Form,  Tabs, message, Upload } from 'antd';
+import { UserOutlined, LockOutlined,  UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { useNavigate} from 'react-router-dom';
+import { useDispatch,useSelector } from 'react-redux'
+import type { RootState,AppDispatch } from '@/store'
+import {updateUserInfo,updateAvatar,updatePassword} from '@/apis/user';
+import { fetchUserInfo } from '@/store/modules/user';
+import { removeToken } from '@/utils/index';
+import dayjs from 'dayjs';
 import './index.scss';
 
 const { TabPane } = Tabs;
 
-// 模拟操作日志数据
-const mockLogs = [
-  { id: 1, action: '登录', time: '2024-03-20 10:00:00', ip: '192.168.1.1', device: 'Chrome/Windows' },
-  { id: 2, action: '修改密码', time: '2024-03-19 15:30:00', ip: '192.168.1.1', device: 'Chrome/Windows' },
-  { id: 3, action: '更新个人信息', time: '2024-03-18 09:15:00', ip: '192.168.1.1', device: 'Chrome/Windows' },
-];
 
 const Profile: React.FC = () => {
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const dispatch: AppDispatch = useDispatch();
 
-  // 模拟用户数据
-  const userInfo = {
-    avatar: '',
-    nickname: '张三',
-    email: 'zhangsan@example.com',
-    registerTime: '2024-01-01',
-  };
-
-  const handleUpdateProfile = async (values: any) => {
+  // 获取用户信息
+  const userInfo = useSelector((state: RootState) => state.user.userInfo)
+  useEffect(() => {
+    dispatch(fetchUserInfo());
+  },[dispatch]);
+  useEffect(() => {
+    if (userInfo) {
+      form.setFieldsValue({
+        nickname: userInfo.nickname,
+        email: userInfo.email,
+        create_time: dayjs(userInfo.create_time).format('YYYY-MM-DD HH:mm:ss'),
+        avater_url: userInfo.avater_url,
+      });
+    }
+  }, [userInfo, form]);
+  
+   // 修改个人信息
+   const handleUpdateProfile = async (values: any) => {
     try {
       setLoading(true);
-      // TODO: 实现更新个人信息的逻辑
-      console.log('更新个人信息:', values);
-      message.success('个人信息更新成功');
+      const res = await updateUserInfo({ nickname: values.nickname,id: userInfo.id });
+      if (res.status === 0) {
+        alert('个人信息更新成功');
+        // 重新拉取用户信息
+        dispatch(fetchUserInfo());
+      } else {
+        message.error(res.message || '更新失败');
+      }
     } catch (error) {
       message.error('更新失败，请重试');
     } finally {
       setLoading(false);
     }
   };
-
+  // 修改密码
   const handleUpdatePassword = async (values: any) => {
     try {
       setLoading(true);
-      // TODO: 实现修改密码的逻辑
-      console.log('修改密码:', values);
-      message.success('密码修改成功');
-      passwordForm.resetFields();
+      const res = await updatePassword({
+        oldPwd: values.oldPassword,
+        newPwd: values.newPassword
+      });
+      if (res.status === 0) {
+        alert('密码修改成功');
+        passwordForm.resetFields();
+        removeToken()
+        navigate('/login');
+      } else {
+        alert(res.message);
+      }
     } catch (error) {
       message.error('修改失败，请重试');
     } finally {
       setLoading(false);
     }
   };
-
-  const uploadProps: UploadProps = {
-    name: 'avatar',
-    showUploadList: false,
-    beforeUpload: (file) => {
-      const isImage = file.type.startsWith('image/');
-      if (!isImage) {
-        message.error('只能上传图片文件！');
+  // 上传头像
+ //  处理上传前图片预览（转 base64）
+const getBase64 = (file:File): Promise<string> => 
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+ // 上传头像
+ const uploadProps: UploadProps = {
+  name:'avater_url',
+  showUploadList: false,
+  beforeUpload: async (file) => {
+    const isImage = file.type.startsWith('image/');
+    if (!isImage) {
+      message.error('只能上传图片文件！');
+      return Upload.LIST_IGNORE;
+    }
+    try{
+      const base64 = await getBase64(file);
+      const res = await updateAvatar({ avater_url: base64 });
+      if (res.status === 0) {
+        alert('头像上传成功');
+        dispatch(fetchUserInfo());
+      } else {
+        message.error(res.message || '头像上传失败');
       }
-      return isImage || Upload.LIST_IGNORE;
-    },
-    onChange: (info) => {
-      if (info.file.status === 'done') {
-        message.success('头像上传成功');
-      } else if (info.file.status === 'error') {
-        message.error('头像上传失败');
-      }
-    },
-  };
 
-  const columns = [
-    { title: '操作', dataIndex: 'action', key: 'action' },
-    { title: '时间', dataIndex: 'time', key: 'time' },
-    { title: 'IP地址', dataIndex: 'ip', key: 'ip' },
-    { title: '设备', dataIndex: 'device', key: 'device' },
-  ];
+    }catch(error) {
+      message.error('上传失败，请重试');
+      return Upload.LIST_IGNORE;
+    }
+    return false; // 阻止默认上传行为
+  }
+ }
+
 
   return (
     <div className="profile-container">
@@ -98,7 +132,7 @@ const Profile: React.FC = () => {
               <div className="avatar-section">
                 <Upload {...uploadProps}>
                   <div className="avatar-wrapper">
-                    <Avatar size={100} icon={<UserOutlined />} src={userInfo.avatar} />
+                    <Avatar size={100} icon={<UserOutlined />} src={userInfo.avater_url ? userInfo.avater_url : undefined} />
                     <div className="avatar-mask">
                       <UploadOutlined />
                       <div>更换头像</div>
@@ -126,7 +160,7 @@ const Profile: React.FC = () => {
                   <Input disabled />
                 </Form.Item>
 
-                <Form.Item name="registerTime" label="注册时间">
+                <Form.Item name="create_time" label="注册时间">
                   <Input disabled />
                 </Form.Item>
 
@@ -202,26 +236,7 @@ const Profile: React.FC = () => {
             </Card>
           </TabPane>
 
-          <TabPane
-            tab={
-              <span>
-                <HistoryOutlined />
-                操作日志
-              </span>
-            }
-            key="3"
-          >
-            <Card className="profile-card">
-              <Table
-                columns={columns}
-                dataSource={mockLogs}
-                rowKey="id"
-                pagination={{ pageSize: 10 }}
-                className="log-table"
-              />
-            </Card>
-          </TabPane>
-        </Tabs>
+        </Tabs> 
         <Button ghost onClick={() => navigate('/')}>返回首页</Button>
       </div>
      

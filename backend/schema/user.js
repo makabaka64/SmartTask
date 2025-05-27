@@ -32,7 +32,6 @@ const password = joi
         body: {
             id,
             nickname,
-            email
         },
     }
     // 更新用户密码
