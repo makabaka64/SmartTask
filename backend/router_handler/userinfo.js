@@ -17,8 +17,8 @@ exports.getUserInfo = (req, res) => {
 
 // 更新用户信息
 exports.updateUserInfo = (req, res) => {
-    const sql = 'update user set ? where id=?'
-    db.query(sql, [req.body, req.user.id], (err, results) => {
+    const sql = 'update user set nickname=? where id=?'
+    db.query(sql, [req.body.nickname, req.user.id], (err, results) => {
         if (err) return res.cc(err)
         if (results.affectedRows !== 1) return res.cc('更新用户信息失败')
         res.send({
@@ -52,7 +52,7 @@ exports.updateUserPwd = (req, res) => {
 // 更新用户头像
 exports.updateUserAvatar = (req, res) => {
     const sql = 'update user set avater_url=? where id=?'
-    db.query(sql, [req.body.avatar, req.user.id], (err, results) => {
+    db.query(sql, [req.body.avater_url, req.user.id], (err, results) => {
         if (err) return res.cc(err)
         if (results.affectedRows !== 1) return res.cc('更新头像失败')
         res.send({
