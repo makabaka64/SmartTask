@@ -120,7 +120,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           />
         </Sider>
 
-        <Drawer
+        {/* <Drawer
           title="导航菜单"
           placement="left"
           onClose={() => setMobileDrawerVisible(false)}
@@ -134,7 +134,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             items={menuItems}
             onClick={handleMenuClick}
           />
-        </Drawer>
+        </Drawer> */}
 
         <Content className="content">
             <Outlet />
