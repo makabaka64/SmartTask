@@ -1,10 +1,9 @@
 // 和用户相关的状态管理
 import { createSlice } from '@reduxjs/toolkit'
 import { setToken as _setToken, getToken, removeToken } from '@/utils'
-import { unwrap } from '@/utils/requestWrapper'
 import type { LoginForm } from '@/types/api'
 import type { AppDispatch } from '@/store'
-import { reguser, login ,sendCode, getUserInfo } from '@/apis/user';
+import { reguser, login ,sendCode, getUserInfo, logout} from '@/apis/user';
 
 const userStore = createSlice({
   name: "user",
@@ -68,13 +67,25 @@ const fetchRegister = (RegisterForm:LoginForm) => {
 const fetchLogin = (LoginForm:LoginForm) => {
   return async (dispatch:AppDispatch) => {
     const res = await login(LoginForm)
-    const data = unwrap(res) 
     if (res.status !== 0) {
       throw new Error('登录失败，请检查邮箱或密码');
     }
-    dispatch(setToken(data.token))
-    console.log('登录成功，token:', data.token);
+    dispatch(setToken(res.token))
+    console.log('登录成功，token:', res.token);
     
+  }
+}
+
+// 登出模块
+const fetchLogout = () => {
+  return async (dispatch: AppDispatch) => {
+    try {
+      await logout() // 请求后端清除 refresh_token + cookie
+    } catch (e) {
+      console.warn('退出登录请求失败:', e)
+    } finally {
+      dispatch(clearUserInfo())
+    }
   }
 }
 
@@ -90,6 +101,6 @@ const fetchUserInfo = () => {
   }
 }
 
-export { fetchLogin, fetchUserInfo, clearUserInfo,fetchRegister,fetchSendCode }
+export { fetchLogin, fetchUserInfo, clearUserInfo,fetchRegister,fetchSendCode,fetchLogout }
 
 export default userReducer

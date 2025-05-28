@@ -18,12 +18,20 @@ export const reguser = (data: LoginForm): Promise<ApiResponse> => {
   return request.post('/api/reguser', data);
 };
 
-export const login = (data: LoginForm): Promise<ApiResponse<LoginResult>> => {
+export const login = (data: LoginForm): Promise<LoginResult> => {
   return request.post('/api/login', data);
 };
 
+export const logout = (): Promise<ApiResponse> => {
+  return request.post('/api/logout');
+}
+
+export const refreshToken = (): Promise<LoginResult> => {
+  return request.get('/api/refresh');
+}
+
 // 个人信息模块
-export const getUserInfo = (): Promise<ApiResponse<UserInfo>> => {
+export const getUserInfo = ():  Promise<ApiResponse<UserInfo>> => {
   return request.get('/my/userinfo');
 };
 

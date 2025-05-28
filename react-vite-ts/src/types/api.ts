@@ -3,6 +3,7 @@ export interface ApiResponse<T = any> {
     status: number;
     message: string;
     data?: T;
+
   }
   // 登录表单
 export interface LoginForm{
@@ -10,11 +11,11 @@ export interface LoginForm{
     password: string;
     verificationCode?: string;
 }
-export interface LoginResult {
+export interface LoginResult extends ApiResponse{
     token: string
   }
   // 用户信息
-  export interface UserInfo {
+  export interface UserInfo extends ApiResponse{
     id: number
     nickname: string
     avater_url: string

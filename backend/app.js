@@ -6,7 +6,10 @@ const config = require('./config');
 const expressJWT = require('express-jwt')
 
 
-app.use(cors())
+app.use(cors({
+    origin: 'http://localhost:5173', // 前端实际运行地址
+    credentials: true               // 允许携带 cookie
+  }))
 app.use(express.json()) 
 app.use(express.urlencoded({ extended: false })) 
 

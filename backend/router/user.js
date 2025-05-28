@@ -14,5 +14,9 @@ router.post('/sendcode', user_handler.sendCode)
 router.post('/reguser', expressJoi(reg_schema), user_handler.regUser)
 // 登录
 router.post('/login', expressJoi(login_schema), user_handler.login)
+// 退出登录
+router.post('/logout', user_handler.logout)
+// token刷新
+router.get('/refresh', user_handler.refreshToken)
 
 module.exports = router
