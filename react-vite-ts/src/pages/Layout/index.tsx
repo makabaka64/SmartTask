@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Button, Drawer } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Button } from 'antd';
 import { Outlet } from 'react-router-dom';
 import {
   MenuFoldOutlined,
@@ -11,25 +11,24 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { clearUserInfo } from '@/store/modules/user';
+import { useDispatch,useSelector } from 'react-redux';
+import type { RootState,AppDispatch } from '@/store'
+import { fetchLogout } from '@/store/modules/user';
 import './index.scss';
 
 const { Header, Sider, Content } = Layout;
 
-interface MainLayoutProps {
-  children?: React.ReactNode;
-}
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+
+const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false);
+  const userInfo = useSelector((state: RootState) => state.user.userInfo)
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatch = useDispatch();
+   const dispatch: AppDispatch = useDispatch();
 
   const handleLogout = () => {
-    dispatch(clearUserInfo());
+    dispatch(fetchLogout());
     navigate('/login');
   };
 
@@ -72,7 +71,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const handleMenuClick = ({ key }: { key: string }) => {
     navigate(key);
-    setMobileDrawerVisible(false);
   };
 
   return (
@@ -90,8 +88,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="header-right">
           <Dropdown overlay={userMenu} placement="bottomRight">
             <div className="user-info">
-              <Avatar icon={<UserOutlined />} />
-              <span className="username">张三</span>
+              <Avatar icon={<UserOutlined />} src={userInfo.avater_url ? userInfo.avater_url : undefined}/>
+              <span className="username">{userInfo?.nickname}</span>
             </div>
           </Dropdown>
         </div>
@@ -119,22 +117,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             onClick={handleMenuClick}
           />
         </Sider>
-
-        {/* <Drawer
-          title="导航菜单"
-          placement="left"
-          onClose={() => setMobileDrawerVisible(false)}
-          open={mobileDrawerVisible}
-          className="mobile-drawer"
-        >
-          <Menu
-            theme="light"
-            mode="inline"
-            selectedKeys={[location.pathname]}
-            items={menuItems}
-            onClick={handleMenuClick}
-          />
-        </Drawer> */}
 
         <Content className="content">
             <Outlet />
