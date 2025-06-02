@@ -78,7 +78,10 @@ input, button{
     padding-left: 15px;
     .anticon-down{
       font-size: 14px;
-      transition: all 1s;
+      transition: all .4s;
+    }
+    .active{
+      transform: rotateZ(180deg);
     }
   }
   .list{

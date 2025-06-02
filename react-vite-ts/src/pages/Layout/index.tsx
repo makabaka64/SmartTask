@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Avatar, Dropdown, Button } from 'antd';
+import type { MenuProps } from 'antd';
 import { Outlet } from 'react-router-dom';
 import {
   MenuFoldOutlined,
@@ -32,24 +33,20 @@ const MainLayout: React.FC = () => {
     navigate('/login');
   };
 
-  const userMenu = (
-    <Menu
-      items={[
-        {
-          key: 'profile',
-          icon: <UserOutlined />,
-          label: '个人中心',
-          onClick: () => navigate('/profile'),
-        },
-        {
-          key: 'logout',
-          icon: <LogoutOutlined />,
-          label: '退出登录',
-          onClick: handleLogout,
-        },
-      ]}
-    />
-  );
+  const items: MenuProps['items'] = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: '个人中心',
+      onClick: () => navigate('/profile'),
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      onClick: handleLogout,
+    },
+  ]
 
   const menuItems = [
     {
@@ -86,7 +83,7 @@ const MainLayout: React.FC = () => {
           <h1 className="logo">智能任务管理平台</h1>
         </div>
         <div className="header-right">
-          <Dropdown overlay={userMenu} placement="bottomRight">
+          <Dropdown menu={{items}} placement="bottomRight">
             <div className="user-info">
               <Avatar icon={<UserOutlined />} src={userInfo.avater_url ? userInfo.avater_url : undefined}/>
               <span className="username">{userInfo?.nickname}</span>

@@ -4,7 +4,7 @@ import { useDrag, useDrop } from 'react-dnd';
 // 唯一识别值
 const TYPE = "TaskItem";
 const Temp = (props: any) => {
-    const { item, index, moveItem, onChangeIndex } = props;
+    const { item, index, moveItem, onChangeIndex, List, setList } = props;
     const tempRef = useRef(null)
 
     const [{isDragging}, drag] = useDrag({
@@ -14,7 +14,7 @@ const Temp = (props: any) => {
         isDragging: monitor.isDragging()
       }),
       end: (draggedItem, monitor) => {
-        moveItem(draggedItem.index)     
+        moveItem(draggedItem.index, List, setList)     
       },
     })
 
@@ -41,7 +41,9 @@ const Temp = (props: any) => {
           }}
           ref={tempRef}
         >
-            {item.title}
+            <div className="item-title">
+              {item.title}
+            </div>
         </div>
     )
 }
