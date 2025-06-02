@@ -27,7 +27,7 @@ export const logout = (): Promise<ApiResponse> => {
 }
 
 export const refreshToken = (): Promise<LoginResult> => {
-  return request.get('/api/refresh');
+  return request.post('/api/refresh');
 }
 
 // 个人信息模块
