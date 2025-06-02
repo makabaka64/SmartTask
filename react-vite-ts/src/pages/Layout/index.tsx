@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { Layout, Menu, Avatar, Dropdown, Button } from 'antd';
 import { Outlet } from 'react-router-dom';
 import {
@@ -13,7 +13,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch,useSelector } from 'react-redux';
 import type { RootState,AppDispatch } from '@/store'
-import { fetchLogout } from '@/store/modules/user';
+import { fetchLogout, fetchUserInfo } from '@/store/modules/user';
 import './index.scss';
 
 const { Header, Sider, Content } = Layout;
@@ -26,6 +26,9 @@ const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
    const dispatch: AppDispatch = useDispatch();
+   useEffect(() => {
+    dispatch(fetchUserInfo());
+  },[dispatch]);
 
   const handleLogout = () => {
     dispatch(fetchLogout());

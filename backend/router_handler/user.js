@@ -86,34 +86,6 @@ exports.regUser = (req, res) => {
     })
   }
   
-  
-  // 登录的处理函数
-  // exports.login = (req, res) => {
-  //   const userInfo = req.body
-  //   if (!userInfo.email || !userInfo.password) {
-  //       return res.cc('邮件或密码不能为空')
-  //   }
-  //   const sql = 'select * from user where email=?'
-  //   db.query(sql, userInfo.email, (err, results) => {
-  //       if (err) {
-  //           return res.cc(err)
-  //       }
-  //       if (results.length !== 1) {
-  //           return res.cc('用户不存在')
-  //       }
-  //       const compareResult = bcrypt.compareSync(userInfo.password, results[0].password)
-  //       if (!compareResult) {
-  //           return res.cc('密码错误')
-  //       }
-  //       const user = { ...results[0], password: '',  avater_url: '' }
-  //       const tokenStr = jwt.sign(user, config.jwtSecretKey, { expiresIn: config.expiresIn })
-  //       res.send({
-  //           status: 0,
-  //           message: '登录成功！',
-  //           token: 'Bearer ' + tokenStr,
-  //       })
-  //   })
-  // }
   exports.login = (req, res) => {
     const userInfo = req.body
     if (!userInfo.email || !userInfo.password) {
@@ -163,6 +135,7 @@ exports.regUser = (req, res) => {
 
   // Refresh Token 接口
 exports.refreshToken = (req, res) => {
+  console.log('Cookies:', req.cookies)
   const refreshToken = req.cookies.refresh_token
   if (!refreshToken) return res.status(401).json({ message: '未提供刷新令牌' })
 
@@ -172,7 +145,7 @@ exports.refreshToken = (req, res) => {
     if (results.length !== 1) return res.status(401).json({ message: '无效的刷新令牌' })
 
     const user = results[0]
-    if (Date.now() > user.refresh_token_expires) {
+    if (Date.now() > new Date(user.refresh_token_expires)) {
       return res.status(401).json({ message: '刷新令牌已过期' })
     }
 
@@ -191,13 +164,14 @@ exports.refreshToken = (req, res) => {
 
 // 退出登录：清空数据库中 Refresh Token
 exports.logout = (req, res) => {
-  const refreshToken = req.cookies.refresh_token
-  if (!refreshToken) return res.send({ status: 0, message: '退出成功' })
+  // const refreshToken = req.cookies.refresh_token
+  // if (!refreshToken) return res.send({ status: 0, message: '退出成功' })
 
-  const sql = 'UPDATE user SET refresh_token=NULL, refresh_token_expires=NULL WHERE refresh_token=?'
-  db.query(sql, refreshToken, (err) => {
+  // const sql = 'UPDATE user SET refresh_token=NULL, refresh_token_expires=NULL WHERE refresh_token=?'
+  // db.query(sql, refreshToken, (err) => {
     res.clearCookie('refresh_token',config.refreshTokenCookieOptions)
-    if (err) return res.cc(err)
-    res.send({ status: 0, message: '退出成功' })
-  })
+    res.send({ status: 0, message: '退出成功' });
+    // if (err) return res.cc(err)
+  //   res.send({ status: 0, message: '退出成功' })
+  // })
 }

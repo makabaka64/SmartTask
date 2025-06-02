@@ -7,8 +7,10 @@ module.exports = {
   refreshTokenExpiresInMs: 7 * 24 * 60 * 60 * 1000, // 7 天（以 ms 为单位）
   refreshTokenCookieOptions: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',         // 生产环境建议启用
-    sameSite: 'Strict',
+    secure: false,
+    sameSite: 'lax',
+    domain: 'localhost', // 明确指定域名
+    path: '/', // 明确路径
     maxAge: 7 * 24 * 60 * 60 * 1000
   },
 
