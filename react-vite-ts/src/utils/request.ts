@@ -3,7 +3,7 @@ import axios from "axios"
 import { getToken, removeToken, setToken } from "./token"
 
 const request = axios.create({
-  baseURL: 'http://127.0.0.1:3001',
+  baseURL: 'http://localhost:3001',
   timeout: 5000,
   withCredentials: true, // 允许发送 cookie（refresh_token）
   headers: {
@@ -17,7 +17,10 @@ let isRefreshing = false  // 标记是否正在刷新
 let requestQueue: ((token: string) => void)[] = []  // 待重试请求队列
 const handleTokenRefresh = async (error: any) => {
   const originalRequest = error.config
-
+  // 排除自己：如果正在请求刷新接口，就不要再次进入
+  if (originalRequest.url?.endsWith('/api/refresh') || originalRequest.url?.endsWith('/api/logout')) {
+    return Promise.reject(error);
+  }
   if (isRefreshing) {
     // 已在刷新中，将当前请求添加到队列中等待新 token
     return new Promise((resolve) => {
@@ -31,7 +34,7 @@ const handleTokenRefresh = async (error: any) => {
   isRefreshing = true
 
   try {
-    const res = await axios.get('/api/refresh', {
+    const res = await axios.post('http://localhost:3001/api/refresh', null, {
       withCredentials: true
     })
 
@@ -76,16 +79,6 @@ request.interceptors.response.use(
     return Promise.reject(error)
   }
 );
-// request.interceptors.response.use((response) => {
-//   return response.data
-// }, (error) => {
-//   console.dir(error)
-//   if (error.response.status === 401) {
-//     removeToken()
-//     alert('登录过期，请重新登录')
-//   }
-//   return Promise.reject(error)
-// })
 
 export { request }
 
