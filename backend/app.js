@@ -4,11 +4,15 @@ const cors = require('cors')
 const joi = require('joi');
 const config = require('./config'); 
 const expressJWT = require('express-jwt')
+const cookieParser = require('cookie-parser')
 
 
+app.use(cookieParser())  // 注册解析 Cookie 的中间件
 app.use(cors({
     origin: 'http://localhost:5173', // 前端实际运行地址
-    credentials: true               // 允许携带 cookie
+    credentials: true,               // 允许携带 cookie
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['set-cookie'] // 允许客户端读取set-cookie头
   }))
 app.use(express.json()) 
 app.use(express.urlencoded({ extended: false })) 
@@ -35,6 +39,8 @@ app.use('/api', userRouter)
 // 用户信息
 const userinfoRouter = require('./router/userinfo')
 app.use('/my', userinfoRouter)
+const taskRouter = require('./router/task');
+app.use('/task', taskRouter);
 
 // 定义错误级别的中间件
 app.use((err, req, res, next) => {
@@ -50,10 +56,15 @@ app.use((err, req, res, next) => {
     // 验证失败导致的错误
     if (err instanceof joi.ValidationError) return res.cc(err)
     // 身份认证失败后的错误
-    if (err.name === 'UnauthorizedError') return res.cc('身份认证失败！')
+    if (err.name === 'UnauthorizedError') {
+        return res.status(401).send({
+            status: 1,
+            message: '身份认证失败！'
+          })
+    }
     // 未知的错误
     return res.cc(err)
 })
 app.listen(3001, function () {
-  console.log('api server running at http://127.0.0.1:3001')
+  console.log('api server running at http://localhost:3001')
 })
