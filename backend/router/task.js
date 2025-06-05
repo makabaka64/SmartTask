@@ -6,16 +6,24 @@ const checkPermission = require('../middleware/checkPermission');
 // 创建任务（创建者自动为管理员）
 router.post('/create', taskHandler.createTask);
 
+// 获取任务列表
+router.get('/list', taskHandler.getTaskList);
+
 // 获取任务详情
-router.get('/:taskId', checkPermission('taskId', 'view_task'), taskHandler.getTaskDetail);
+router.get('/Detail/:taskId', checkPermission('taskId', 'view_task'), taskHandler.getTaskDetail);
 
 // 编辑任务
-router.post('/:taskId', checkPermission('taskId', 'edit_task'), taskHandler.updateTask);
+router.post('/update/:taskId', checkPermission('taskId', 'edit_task'), taskHandler.updateTask);
 
 // 删除任务
-router.delete('/:taskId', checkPermission('taskId', 'delete_task'), taskHandler.deleteTask);
+router.delete('/delete/:taskId', checkPermission('taskId', 'delete_task'), taskHandler.deleteTask);
 
 // 邀请成员
-router.post('/:taskId/invite', checkPermission('taskId', 'edit_task'), taskHandler.inviteUser);
+router.post('/invite/:taskId', checkPermission('taskId', 'member_manage'), taskHandler.inviteUser);
+
+// 移除成员
+// router.delete('/remove/:taskId', checkPermission('taskId', 'member_manage'), taskHandler.removeMember);
+// 同意邀请
+router.post('/accept/:taskId', taskHandler.acceptInvitation);
 
 module.exports = router;
