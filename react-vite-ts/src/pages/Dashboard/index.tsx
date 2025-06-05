@@ -3,14 +3,19 @@ import {
   PlusOutlined,
   DownOutlined,
 } from '@ant-design/icons'
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import classNames from 'classnames';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import Drop from './component/Drop';
+import {useDispatch, useSelector } from 'react-redux'
+import type { RootState,AppDispatch } from '@/store'
 import { Drawer, Form, Input, Select, Space, Button, DatePicker } from 'antd';
 import type { GetProps } from 'antd';
 import dayjs from 'dayjs';
+import {createTask} from '@/apis/task';
+import {fetchTaskList } from '@/store/modules/taskSlice';
+import type { TaskDetail } from '@/types/task';
 
 function cloneDeep(value: any, hash = new WeakMap()) {
   if (value === null || typeof value !== 'object') {
@@ -47,39 +52,69 @@ const Dashboard = () => {
   const [finish, setFinish] = useState(false)
   const [targetIndex, setTargetIndex] = useState<any>(-1)
   const [open, setOpen] = useState(false);
-  const [proList, setProList] = useState([
-    {id: 0, title: "1"},
-    {id: 1, title: "2"},
-    {id: 2, title: "3"},
-    {id: 3, title: "4"},
-    {id: 4, title: "5"},
-    {id: 5, title: "6"},
+  const dispatch: AppDispatch = useDispatch();
+  const [proList, setProList] = useState<TaskDetail[]>([
   ])
-  const [waitList, setWaitList] = useState([
-    {id: 0, title: "1"},
-    {id: 1, title: "2"},
-    {id: 2, title: "3"},
-    {id: 3, title: "4"},
-    {id: 4, title: "5"},
-    {id: 5, title: "6"},
+  const [waitList, setWaitList] = useState<TaskDetail[]>([
   ])
-  const [finishList, setFinishList] = useState([
-    {id: 0, title: "1"},
-    {id: 1, title: "2"},
-    {id: 2, title: "3"},
-    {id: 3, title: "4"},
-    {id: 4, title: "5"},
-    {id: 5, title: "6"},
+  const [finishList, setFinishList] = useState<TaskDetail[]>([
   ])
 
   const [form] = Form.useForm();
+  // 获取任务列表
+  const taskInfo = useSelector((state: RootState) => state.task.tasklist) as TaskDetail[];
+  useEffect(() => {
+    dispatch(fetchTaskList())
+  }, [dispatch]);
+  
+  useEffect(() => {
+    if (taskInfo && Array.isArray(taskInfo)) {
+      const now = dayjs();
+  
+      const proceedTasks = taskInfo.filter(task => {
+        const start = dayjs(task.created_at);
+        const end = dayjs(task.created_end);
+        return now.isAfter(start) && now.isBefore(end); // 进行中
+      });
+  
+      const waitTasks = taskInfo.filter(task => {
+        const start = dayjs(task.created_at);
+        return now.isBefore(start); // 未开始
+      });
+  
+      const finishTasks = taskInfo.filter(task => {
+        const end = dayjs(task.created_end);
+        return now.isAfter(end); // 已结束
+      });
+  
+      setProList(proceedTasks);
+      setWaitList(waitTasks);
+      setFinishList(finishTasks);
+    }
+  }, [taskInfo]);
+  // 创建任务
+  const handleCreateTask = async (values: any) => {
+    try {
+      const res = await createTask({
+        name: values.title,
+        created_at: values.date[0].toISOString(),
+        created_end: values.date[1].toISOString(),
+        description: values.describe,
+      });
+      console.log('创建任务成功:', res);
+      alert('任务创建成功');
+      dispatch(fetchTaskList()); // 刷新任务列表
+      form.resetFields();
+      setOpen(false);
+    } catch (error) {
+      console.error('创建任务失败:', error);
+    }
+  };
 
   const disabledDate: RangePickerProps['disabledDate'] = (current) => {
     return current && current < dayjs().endOf('day');
   };
-  const onFinish = (values: any) => {
-    console.log(values);
-  };
+  
 
   const onReset = () => {
     form.resetFields();
@@ -122,7 +157,7 @@ const Dashboard = () => {
           <div className="title" onClick={() => setProceed(!proceed)}>进行中 <DownOutlined className={classNames({'active': proceed})} /></div>
           <div className={classNames(["list", {"hidden": proceed}])}>
             <Drop setList={setProList} List={proList} targetIndex={targetIndex} onChangeIndex={onChangeIndex} moveItem={moveItem} />
-
+          
           </div>
         </div>
         <div className={classNames(["list-menu","waiting"])}>
@@ -151,7 +186,7 @@ const Dashboard = () => {
       {...layout}
       form={form}
       name="control-hooks"
-      onFinish={onFinish}
+      onFinish={handleCreateTask}
       style={{ maxWidth: 700 }}
     >
       <Form.Item name="title" label="标题" rules={[{ required: true }]}>
@@ -171,7 +206,7 @@ const Dashboard = () => {
       </Form.Item>
       <Form.Item {...tailLayout}>
         <Space>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="submit" >
             Submit
           </Button>
           <Button htmlType="button" onClick={onReset}>
