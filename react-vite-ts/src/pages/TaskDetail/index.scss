@@ -1,0 +1,173 @@
+input, button{
+  outline: none;
+}
+
+.task-container{
+  margin: 20px 24px;
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  padding: 12px 20px;
+  height: calc(100vh - 64px - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  .return{
+    font-size: 20px;
+    width: 100%;
+    text-align: end;
+  }
+  .title{
+    font-size: 24px;
+    margin-bottom: 10px;
+    margin-top: 5px;
+  }
+  .status-area{
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    margin: 16px 0;
+    .area-item{
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      .logo{
+        font-size: 40px;
+        display: flex;
+        align-items: center;
+        .ant-avatar{
+          width: 40px;
+          height: 40px;
+        }
+      }
+      .content-box{
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin-left: 6px;
+        .describe{
+          font-size: 14px;
+        }
+        .classify{
+          font-size: 12px;
+          color: #aaa;
+        }
+      }
+    }
+  }
+  .tab{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.ant-tabs{
+  flex: 1;
+  .ant-tabs-content-holder{
+    flex: 1;
+    display: flex;
+    .ant-tabs-content{
+      flex: 1;
+      display: flex;
+      .ant-tabs-tabpane{
+        flex: 1;
+        display: flex;
+      } 
+      .ant-tabs-tabpane-hidden{
+        display: none;
+      }
+    }
+  }
+}
+.task-describe{
+  width: 100%;
+  .text{
+    margin-bottom: 16px;
+  }
+  .sub-btn{
+    button{
+      margin-left: 14px;
+    }
+  }
+}
+
+.member-manage{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  .members{
+    flex: 1;
+    .member-item{
+      border-bottom: 1px solid #aaa;
+      height: 40px;
+      line-height: 40px;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      padding: 0 14px;
+      .delete{
+        font-size: 18px;
+        color: #aaa;
+        display: none;
+      }
+      &:hover{
+        background-color: #eee;
+        .delete{
+          display: block;
+        }
+      }
+    }
+    .addMem{
+      border-top: 1px solid #aaa;
+      border-bottom: 1px solid #aaa;
+      height: 50px;
+      .default-add{
+        display: flex;
+        flex-direction: row;
+        height: 100%;
+        align-items: center;
+        .logo{
+          font-size: 24px;
+          color: #ccc;
+        }
+        .func-name{
+          font-size: 16px;
+          color: #aaa;
+          margin-left: 6px;
+        }
+      }
+      .func-add{
+        display: flex;
+        flex-direction: row;
+        height: 100%;
+        align-items: center;
+        input{
+          height: 30px;
+          border: 1.5px solid #ccc;
+          border-top-left-radius: 6px;
+          border-bottom-left-radius: 6px;
+          padding-left: 5px;
+          &:focus{
+            border-color: #80abe9;
+          }
+        }
+        button{
+          background-color: #fff;
+          border: 1.5px solid #ccc;
+          border-left: none;
+          height: 30px;
+          padding: 0 5px;
+          border-top-right-radius: 6px;
+          border-bottom-right-radius: 6px;
+          color: #666;
+          &:hover{
+            color: #80abe9;
+          }
+        }
+      }
+      .hidden{
+        display: none;
+      }
+    }
+  }
+}
