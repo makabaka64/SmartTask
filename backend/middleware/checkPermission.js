@@ -2,7 +2,7 @@ const db = require('../db/index');
 
 module.exports = (taskIdParam = 'taskId', requiredPermission) => {
   return async (req, res, next) => {
-    const userId = req.auth.id;
+    const userId = req.user.id;
     const taskId = parseInt(req.params[taskIdParam] || req.body[taskIdParam]);
 
     if (!taskId) return res.cc('任务 ID 缺失');

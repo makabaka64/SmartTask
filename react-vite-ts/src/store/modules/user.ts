@@ -80,7 +80,7 @@ const fetchLogin = (LoginForm:LoginForm) => {
 const fetchLogout = () => {
   return async (dispatch: AppDispatch) => {
     try {
-      await logout() // 请求后端清除 refresh_token + cookie
+      await logout() 
     } catch (e) {
       console.warn('退出登录请求失败:', e)
     } finally {

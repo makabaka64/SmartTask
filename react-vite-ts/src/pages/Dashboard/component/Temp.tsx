@@ -1,12 +1,13 @@
 import { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
- 
+import { CheckCircleTwoTone, CloseCircleTwoTone } from '@ant-design/icons';
+import { useNavigate} from 'react-router-dom';
 // 唯一识别值
 const TYPE = "TaskItem";
 const Temp = (props: any) => {
     const { item, index, moveItem, onChangeIndex, List, setList } = props;
     const tempRef = useRef(null)
-
+    const navigate = useNavigate();
     const [{isDragging}, drag] = useDrag({
       type: TYPE,
       item: {...item, index},
@@ -40,10 +41,24 @@ const Temp = (props: any) => {
             opacity: isDragging ? 0.5 : 1,
           }}
           ref={tempRef}
+          onClick={() => {
+            navigate(`/task/${item.id}`)
+          }
+          }
         >
             <div className="item-title">
-              {item.title}
+              {item.name}
             </div>
+            <div className="item-desc">
+            {item.status === '1' ? (
+               <CheckCircleTwoTone twoToneColor="#52c41a" /> 
+             ) : (
+               <CloseCircleTwoTone twoToneColor="#f5222d" />
+         )}
+              <span className="status-text">
+                   {item.status === '1' ? ' 已完成' : ' 未完成'}
+              </span>
+  </div>
         </div>
     )
 }
