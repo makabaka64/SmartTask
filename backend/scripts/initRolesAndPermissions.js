@@ -12,6 +12,7 @@ const dbConfig = {
 const roles = [
   { name: 'admin', description: '任务管理员' },
   { name: 'user', description: '普通成员' },
+  { name: 'Participant', description: '参与者' }
 ]
 
 const permissions = [
@@ -19,10 +20,12 @@ const permissions = [
   { name: 'edit_task', description: '编辑任务' },
   { name: 'delete_task', description: '删除任务' },
   { name: 'view_task', description: '查看任务' },
+  { name: 'member_manage', description: '管理成员' }
 ]
 
 const rolePermissionMap = {
-  admin: ['create_task', 'edit_task', 'delete_task', 'view_task'],
+  admin: ['create_task', 'edit_task', 'delete_task', 'view_task', 'member_manage'],
+  Participant:['view_task', 'edit_task'],
   user: ['view_task'],
 }
 
