@@ -183,3 +183,101 @@ exports.acceptInvitation = (req, res) => {
       });
     });
   };
+
+  // 任务状态转换
+
+  exports.changeStatus = (req, res) => {
+    const { type = false, status, created_at, created_end, newTime } = req.body;
+    const taskId = req.params.taskId;
+
+    // 提取数据库更新操作为独立函数
+    const updateTask = (fields, values) => {
+      const placeholders = fields.map((item) => {
+        return `${item}=?`
+      }).join(', ');
+      const sql = `UPDATE task SET ${placeholders} WHERE id = ?`;
+      
+      db.query(sql, [...values, taskId], (err, result) => {
+        if (err) return res.cc(err);
+        if (result.affectedRows !== 1) return res.cc('任务状态更新失败！');
+        res.cc('任务状态更新成功', 0);
+      });
+    };
+
+    // 处理有类型更新的情况
+    const handleTypeUpdate = () => {
+      if (type === 'created_at') {
+        if (newTime > created_at) return res.cc('任务状态异常');
+        return updateTask(['status', 'created_at'], [status, newTime]);
+      }
+
+      if (type === 'created_end') {
+        if (newTime >= created_at && newTime <= created_end) {
+          return updateTask(['status', 'created_end'], [status, newTime]);
+        }
+        
+        if (newTime < created_at) {
+          return updateTask(
+            ['status', 'created_at', 'created_end'], 
+            [status, newTime, newTime]
+          );
+        }
+        
+        return res.cc('任务状态异常');
+      }
+    };
+
+    // 处理无类型更新的情况（自动状态计算）
+    const handleAutoStatus = () => {
+      const currentTime = +new Date(newTime);
+      const startTime = +new Date(created_at);
+      const endTime = +new Date(created_end);
+
+      let newStatus = 1; // 默认为进行中
+      if (currentTime < startTime) newStatus = 0; // 未开始
+      else if (currentTime > endTime) newStatus = 2; // 已结束
+
+      updateTask(['status'], [newStatus]);
+    };
+
+    // 主执行逻辑
+    if (type) {
+      handleTypeUpdate();
+    } else {
+      handleAutoStatus();
+    }
+  };
+
+  // 拖拽排序处理
+  exports.taskSort = (req, res) => {
+    const {oldIndex, newIndex, userId} = req.body
+    if(+oldIndex === +newIndex) {
+      return res.cc('修改成功！', 0)
+    }
+    const low = oldIndex < newIndex ? +oldIndex : +newIndex
+    const high = oldIndex > newIndex ? +oldIndex : +newIndex
+    const type = newIndex - oldIndex > 0 ? -1 : 1
+    const offest = +newIndex
+    const strsql = `select id from task where userId=? and item_index=?`
+    db.query(strsql, [userId, +oldIndex], (err, result) => {
+      if(err) return res.cc(err)
+      if(result.length !== 1) return res.cc('查询参数错误！')
+      const task_id = result[0].id
+      
+      const sql = `update task set item_index=item_index+? where userId=? and item_index>=? and item_index<=?`
+      db.query(sql, [type, +userId, low, high], (err, result) => {
+        if(err) {
+          return res.cc(err)
+        }
+        const sql2 = `update task set item_index=? where id=?`
+        db.query(sql2, [offest, task_id], (err, result) => {
+          if(err) return res.cc(err)
+          return res.cc('修改成功！', 0)
+        })
+      })
+      
+    
+    })
+    
+  }
+
