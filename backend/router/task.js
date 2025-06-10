@@ -26,4 +26,8 @@ router.post('/invite/:taskId', checkPermission('taskId', 'member_manage'), taskH
 // 同意邀请
 router.post('/accept/:taskId', taskHandler.acceptInvitation);
 
+router.post('/status/:taskId', taskHandler.changeStatus)
+
+router.post('/tasksort', taskHandler.taskSort)
+
 module.exports = router;
