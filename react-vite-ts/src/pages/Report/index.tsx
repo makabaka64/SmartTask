@@ -1,94 +1,114 @@
-
-import './index.scss'
-import { useState } from 'react';
+import{ useEffect } from 'react';
+import { useDispatch,useSelector } from 'react-redux';
+import { fetchNotifications } from '@/apis/task';
+import { Card, Tabs, Empty, Avatar ,Button} from 'antd';
+import { UserOutlined, BellOutlined } from '@ant-design/icons';
+import type { Notification } from '@/types/notification';
+import type { RootState } from '@/store/index';
+import './index.scss';
+import { setNotificationList } from '@/store/modules/notification';
 
 const Report = () => {
-  interface PieData {
-    label: string;
-    value: number;
-    color: string;
+  const dispatch = useDispatch();
+  const notifications = useSelector((state: RootState) => state.notification.list);
+  const reminders = notifications.filter(
+    (notification: Notification) => notification.type === 'reminder'
+  );
+  const invites = notifications.filter(
+    (notification: Notification) => notification.type === 'invite'
+  );
+  //轮询通知列表
+  useEffect(() => {
+    const getList = async () => {
+      const res = await fetchNotifications();
+      if (res.status === 0) {
+        // 更新通知列表
+        dispatch(setNotificationList(res.data));
+      }
+    };
+    getList();
+    const interval = setInterval(getList, 30000); // 每30秒轮询一次
+    return () => clearInterval(interval); // 清除定时器
+  }, [dispatch]);
+
+  // 接受邀请
+  const handleAccept = async(noti:Notification) => {
+    // const res = await fetchNotifications();
+    // if (res.status === 0) {
+    //   // 更新通知列表
+    //   dispatch(setNotificationList(res.data));
+    // }
   }
+  const tabItems = [
+    {
+      key: '1',
+      label: (
+        <span>
+          <BellOutlined />
+          {' 系统通知'}
+        </span>
+      ),
+      children: (
+        reminders.length === 0 ? (
+          <Empty description="暂无系统通知" />
+        ) : (
+          reminders.map((notification) => (
+            <Card key={notification.id} className="report-card">
+              <div className="avatar-section">
+                <Avatar icon={<BellOutlined />} />
+                <div className="message-content">
+                  <div className="message-text">{notification.message}</div>
+                  <div className="message-time">
+                    {new Date(notification.created_at).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))
+        )
+      ),
+    },
+    {
+      key: '2',
+      label: (
+        <span>
+          <UserOutlined />
+          {' 私信'}
+        </span>
+      ),
+      children: (
+        invites.length === 0 ? (
+          <Empty description="暂无私信" />
+        ) : (
+          invites.map((notification) => (
+            <Card key={notification.id} className="report-card">
+              <div className="avatar-section">
+                <Avatar icon={<UserOutlined />} />
+                <div className="message-content">
+                  <div className="message-text">{notification.message}</div>
+                  <div className="message-time">
+                    {new Date(notification.created_at).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              {notification.status === 'unread' && (
+                <Button type="primary" size="small" onClick={() => handleAccept(notification)}>接受邀请</Button>
+              )}
+              {notification.status === 'accepted' && (
+                <Button size="small" disabled>已加入</Button>
+              )}
+            </Card>
+          ))
+        )
+      ),
+    },
+  ];
 
-  const [list, setList] = useState([
-    {
-      id: 1,
-      label: '未开始',
-      value: 30,
-      color: 'blue'
-    },
-    {
-      id: 2,
-      label: '已结束',
-      value: 40,
-      color: 'green'
-    },
-    {
-      id: 3,
-      label: '进行中',
-      value: 30,
-      color: 'yellow'
-    },
-  ])
-  const static_x = ["50%", "100%", "100%", "100%", "50%", "0", "0%"]
-  const static_y = ["0%", "0%", "50%", "100%", "100%", "100%", "50%"]
-
-  let rol_deg = 0
   return (
-    <div className="container">
-      <div className="task-statistic">
-        <div className="task-title">任务统计</div>
-        <div className="chart-container">
-          <div className="pie-chart" id="pieChart">
-            {/* <div className="pie-segment"></div> */}
-            {list.map((item, index: number) => {
-              const deg = ['50%', '50%', '50%', '0%']
-              let value = item.value * 360 / 100
-              let i = 0
-              console.log(value);
-              
-              for(; value > 45; value-=45, i++){
-                deg.push(static_x[i])
-                deg.push(static_y[i])
-                deg.push()
-              }
-              console.log(item.value);
-              
-              const rol = `rotateZ(${rol_deg}deg)`
-              rol_deg+=item.value * 360 / 100
-              console.log(i);
-              const randians = value * (Math.PI / 180)
-              const side = Math.tan(randians) * 50 + 50 + '%'
-              console.log(side);
-              
-              if(i === 0 || i === 3 || i === 4 || i === 7) {
-                deg.push(side)
-                deg.push(static_y[i+1])
-              }
-              else{
-                deg.push(static_x[i+1])
-                deg.push(side)
-              }
-              deg.push('50%')
-              deg.push('50%')
-              const str = deg.join(' ')
-              console.log(str);
-              
-              return (
-                <div
-                  className="pie-segment"
-                  key={item.id}
-                  style={{"backgroundColor": item.color, "clipPath": `polygon(${str})`, "transform": rol}}
-                ></div>
-              )
-            })}
-            
-          </div>
-          <div className="legend" id="legend"></div>
-          <div className="tooltip" id="tooltip"></div>
-        </div>
-      </div>
+    <div className="report-container">
+      <Tabs defaultActiveKey="1" className="report-tabs" items={tabItems} />
     </div>
-  )
+  );
 };
 
 export default Report;
