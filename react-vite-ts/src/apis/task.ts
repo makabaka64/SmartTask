@@ -10,18 +10,22 @@ export const getTaskList = (): Promise<ApiResponse<TaskDetail[]>> => {
   return request.get('/task/list');
 }
 // 获取任务详情
-export const getTaskDetail = (id: string): Promise<TaskDetail> => {
-  return request.get(`/Detail/task/${id}`);
+export const getTaskDetail = (id: number): Promise<TaskDetail> => {
+  return request.get(`/task/Detail/${id}`);
 }
 // 编辑任务
-export const editTask = (id: string, data: TaskDetail): Promise<TaskDetail> => {
-  return request.post(`/update/task/${id}`,data);
+export const editTask = (id: number, data: TaskDetail): Promise<TaskDetail> => {
+  return request.post(`/task/update/${id}`,data);
 };
 // 删除任务
-export const deleteTask = (id: string): Promise<TaskDetail> => {
-    return request.delete(`/delete/task/${id}`);
+export const deleteTask = (id: number): Promise<TaskDetail> => {
+    return request.delete(`/task/delete/${id}`);
 }
 // 邀请成员
-// export const inviteMember = (id: string, email: string): Promise<TaskDetail> => {
-//     return request.post(`/task/${id}/invite`, { email });
-// }
+export const inviteMember = (id: number, email: string): Promise<{ status: number; message: string }> => {
+    return request.post(`/task/invite/${id}`, { email });
+}
+// 获取通知
+export const fetchNotifications = (): Promise<{ status: number; data: Notification[] }> => {
+  return request.get('/task/notification');
+};

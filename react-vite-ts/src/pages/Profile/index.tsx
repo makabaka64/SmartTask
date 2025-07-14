@@ -11,7 +11,6 @@ import { removeToken } from '@/utils/index';
 import dayjs from 'dayjs';
 import './index.scss';
 
-const { TabPane } = Tabs;
 
 
 const Profile: React.FC = () => {
@@ -114,82 +113,82 @@ const getBase64 = (file:File): Promise<string> =>
   }
  }
 
-
-  return (
-    <div className="profile-container">
-      <div className="profile-content">
-        <Tabs defaultActiveKey="1" className="profile-tabs">
-          <TabPane
-            tab={
-              <span>
-                <UserOutlined />
-                个人信息
-              </span>
-            }
-            key="1"
-          >
-            <Card className="profile-card">
-              <div className="avatar-section">
-                <Upload {...uploadProps}>
-                  <div className="avatar-wrapper">
-                    <Avatar size={100} icon={<UserOutlined />} src={userInfo.avater_url ? userInfo.avater_url : undefined} />
-                    <div className="avatar-mask">
-                      <UploadOutlined />
-                      <div>更换头像</div>
-                    </div>
-                  </div>
-                </Upload>
+ const tabItems = [
+  {
+    key: '1',
+    label: (
+      <span>
+        <UserOutlined />
+        {' 个人信息'}
+      </span>
+    ),
+    children: (
+      <Card className="profile-card">
+        <div className="avatar-section">
+          <Upload {...uploadProps}>
+            <div className="avatar-wrapper">
+              <Avatar 
+                size={100} 
+                icon={<UserOutlined />} 
+                src={userInfo.avater_url || undefined} 
+              />
+              <div className="avatar-mask">
+                <UploadOutlined />
+                <div>更换头像</div>
               </div>
+            </div>
+          </Upload>
+        </div>
 
-              <Form
-                form={form}
-                layout="vertical"
-                initialValues={userInfo}
-                onFinish={handleUpdateProfile}
-                className="profile-form"
-              >
-                <Form.Item
-                  name="nickname"
-                  label="用户名"
-                  rules={[{ required: true, message: '请输入用户名' }]}
-                >
-                  <Input placeholder="请输入用户名" />
-                </Form.Item>
-
-                <Form.Item name="email" label="邮箱">
-                  <Input disabled />
-                </Form.Item>
-
-                <Form.Item name="create_time" label="注册时间">
-                  <Input disabled />
-                </Form.Item>
-
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={loading} block>
-                    保存修改
-                  </Button>
-                </Form.Item>
-              </Form>
-            </Card>
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span>
-                <LockOutlined />
-                账户安全
-              </span>
-            }
-            key="2"
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={userInfo}
+          onFinish={handleUpdateProfile}
+          className="profile-form"
+        >
+          <Form.Item
+            name="nickname"
+            label="用户名"
+            rules={[{ required: true, message: '请输入用户名' }]}
           >
-            <Card className="profile-card">
-              <Form
-                form={passwordForm}
-                layout="vertical"
-                onFinish={handleUpdatePassword}
-                className="profile-form"
-              >
-                <Form.Item
+            <Input placeholder="请输入用户名" />
+          </Form.Item>
+
+          <Form.Item name="email" label="邮箱">
+            <Input disabled />
+          </Form.Item>
+
+          <Form.Item name="create_time" label="注册时间">
+            <Input disabled />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} block>
+              保存修改
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
+    ),
+  },
+  {
+    key: '2',
+    label: (
+      <span>
+        <LockOutlined />
+        {' 账户安全'}
+      </span>
+    ),
+    children: (
+      <Card className="profile-card">
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={handleUpdatePassword}
+          className="profile-form"
+        >
+          <Form.Item
                   name="oldPassword"
                   label="当前密码"
                   rules={[{ required: true, message: '请输入当前密码' }]}
@@ -232,16 +231,24 @@ const getBase64 = (file:File): Promise<string> =>
                     修改密码
                   </Button>
                 </Form.Item>
-              </Form>
-            </Card>
-          </TabPane>
+        </Form>
+      </Card>
+    ),
+  },
+];
 
-        </Tabs> 
-        <Button ghost onClick={() => navigate('/')}>返回首页</Button>
-      </div>
-     
+return (
+  <div className="profile-container">
+    <div className="profile-content">
+      <Tabs 
+        defaultActiveKey="1" 
+        className="profile-tabs" 
+        items={tabItems}  
+      />
+      <Button ghost onClick={() => navigate('/')}>返回首页</Button>
     </div>
-  );
+  </div>
+);
 };
 
 export default Profile;

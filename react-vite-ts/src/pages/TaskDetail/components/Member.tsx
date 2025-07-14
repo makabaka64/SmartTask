@@ -1,27 +1,34 @@
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import { CloseOutlined, SendOutlined } from '@ant-design/icons'
 import { Pagination } from 'antd';
 import type { PaginationProps } from 'antd';
+import { inviteMember } from '@/apis/task';
 
-
-const Member: React.FC = () => {
-  const [memList, setMemList] = useState([
-    {id: 1},
-    {id: 2},
-    {id: 3},
-    {id: 4},
-    {id: 5},
-    {id: 6},
-    {id: 7},
-    {id: 8},
-    {id: 9},
-    {id: 10},
-    {id: 11},
-    {id: 12},
-    {id: 13},
-    {id: 14},
-  ])
-  const [readList, setReadList] = useState<any>([])
+interface Props {
+  taskId: number;
+  canManage: boolean;
+}
+const Member = ({ taskId}: Props) => {
+  const [ email, setEmail ] = useState('')
+  // const [memList, setMemList] = useState([
+  //   {id: 1},
+  //   {id: 2},
+  //   {id: 3},
+  //   {id: 4},
+  //   {id: 5},
+  //   {id: 6},
+  //   {id: 7},
+  //   {id: 8},
+  //   {id: 9},
+  //   {id: 10},
+  //   {id: 11},
+  //   {id: 12},
+  //   {id: 13},
+  //   {id: 14}])
+  const [ memList, setMemList ] = useState(
+    Array.from({length: 14 }, (_, i) => ({id: i + 1}))
+  )
+  const [readList, setReadList] = useState<any[]>([])
 
   const onChange: PaginationProps['onChange'] = (current, pageSize) => {
     console.log(current, pageSize);
@@ -35,7 +42,22 @@ const Member: React.FC = () => {
 
   useEffect(() => {
     onChange(1,5)
-  },[])
+  },[memList])
+   // 邀请成员
+  const handleInvite = async () => {
+    if(!email) {
+      alert('请输入邮箱')
+      return
+    }
+    try {
+      const res = await inviteMember(taskId, email)
+     console.log(res);
+     
+    }catch(err) {
+      console.log(err);
+    }
+  }
+  
   return (
     <div className="member-manage">
       <div className="members">
