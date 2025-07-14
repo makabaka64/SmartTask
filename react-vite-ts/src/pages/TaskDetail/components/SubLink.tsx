@@ -2,7 +2,10 @@ import React from "react"
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { Button, Upload } from 'antd';
-
+interface Props {
+  taskId: number;
+  canSubmit: boolean;
+}
 const props: UploadProps = {
   action: '//jsonplaceholder.typicode.com/posts/',
   listType: 'picture',
@@ -18,17 +21,17 @@ const props: UploadProps = {
   },
 };
 
-const SubLink: React.FC = () => {
-  
+const SubLink = ({ taskId, canSubmit }: Props) => {
   return (
     <div className="sub-link">
       <div className="add-link">
         <Upload {...props}>
-          <Button icon={<UploadOutlined />}>Upload</Button>
+          <Button icon={<UploadOutlined />} disabled={!canSubmit}>Upload</Button>
         </Upload>
       </div>
     </div>
   )
+  
 }
 
 export default SubLink

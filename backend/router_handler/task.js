@@ -1,16 +1,17 @@
 const db = require('../db/index');
+const { scheduleTaskReminder } = require('../reminder');
 // 时间格式转换函数
 function toMysqlDatetime(isoString) {
     return isoString ? isoString.replace('T', ' ').replace('Z', '').split('.')[0] : null;
   }
 // 创建任务
 exports.createTask = (req, res) => {
-  const { name, description, created_at, created_end } = req.body;
+  const { name, description, created_at, created_end, index } = req.body;
   const userId = req.user.id;
   const createdAt = toMysqlDatetime(created_at);
    const createdEnd = toMysqlDatetime(created_end);
-  const insertTask = 'INSERT INTO task (name, description, userId, created_at, created_end) VALUES (?, ?, ?, ?, ?)';
-  db.query(insertTask, [name, description, userId, createdAt, createdEnd], (err, result) => {
+  const insertTask = 'INSERT INTO task (name, description, userId, created_at, created_end, item_index) VALUES (?, ?, ?, ?, ?, ?)';
+  db.query(insertTask, [name, description, userId, createdAt, createdEnd, index], (err, result) => {
     if (err) return res.cc(err);
     const taskId = result.insertId;
 
@@ -29,6 +30,13 @@ exports.createTask = (req, res) => {
       const insertUserTaskRole = 'INSERT INTO user_task_role (user_id, task_id, role_id) VALUES (?, ?, ?)';
       db.query(insertUserTaskRole, [userId, taskId, adminRoleId], (err3) => {
         if (err3) return res.cc(err3);
+            // 截止日期提醒
+            scheduleTaskReminder({
+                id: taskId,
+                name,
+                created_end: createdEnd,
+              });
+
         res.send({ status: 0, message: '任务创建成功', taskId });
       });
     });
@@ -135,15 +143,16 @@ exports.inviteUser = (req, res) => {
         if (userResults.length === 0) return res.cc('该用户不存在');
   
         const recipientId = userResults[0].id;
-  
+        const message = `${req.user.nickname} 邀请你参与任务 ${taskId}`;
         // 3. 插入一条“邀请”通知
+       
         const insertNotification = `
           INSERT INTO notification (recipient_id, sender_id, task_id, type, message)
           VALUES (?, ?, ?, 'invite', ?)
         `;
   
-        const message = `${req.user.nickname} 邀请你参与任务 ${taskId}`;
-        db.query(insertNotification, [recipientId, req.user.id, taskId, message], (notiErr) => {
+       
+        db.query(insertNotification, [recipientId, req.user.id, taskId, message], (notiErr, notiRes) => {
           if (notiErr) return res.cc(notiErr);
           res.cc('邀请已发送，等待对方确认', 0);
         });
@@ -280,4 +289,24 @@ exports.acceptInvitation = (req, res) => {
     })
     
   }
+
+  // 获取通知
+exports.getNotificationList = (req, res) => {
+  const userId = req.user.id;
+
+  const sql = `
+    SELECT * FROM notification
+    WHERE recipient_id = ?
+    ORDER BY created_at DESC
+  `;
+
+  db.query(sql, [userId], (err, results) => {
+    if (err) return res.cc(err);
+    res.send({
+      status: 0,
+      message: '获取通知成功',
+      data: results,
+    });
+  });
+};
 

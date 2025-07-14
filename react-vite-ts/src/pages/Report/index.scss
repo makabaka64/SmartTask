@@ -1,0 +1,14 @@
+.report-container {
+    padding: 1rem 2rem;
+    .report-card{
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 16px;
+        margin-bottom: 1rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(8px);
+        transition: transform 0.3s ease;
+        &:hover {
+                transform: translateY(-5px);  
+             }
+    }
+}

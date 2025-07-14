@@ -5,7 +5,8 @@ const joi = require('joi');
 const config = require('./config'); 
 const expressJWT = require('express-jwt')
 const cookieParser = require('cookie-parser')
-
+const http = require('http')
+const server = http.createServer(app);
 
 app.use(cookieParser())  // 注册解析 Cookie 的中间件
 app.use(cors({
