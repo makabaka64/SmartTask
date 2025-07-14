@@ -11,7 +11,7 @@ const userStore = createSlice({
   initialState: {
     token: getToken() || '',
     userInfo: {
-      id: 0,   // 初始值改为 number
+      id: 0,  
       nickname: '',
       email: '',
       avater_url: '',

@@ -10,7 +10,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import Drop from './component/Drop';
 import {useDispatch, useSelector } from 'react-redux'
 import type { RootState,AppDispatch } from '@/store'
-import { Drawer, Form, Input, Select, Space, Button, DatePicker } from 'antd';
+import { Drawer, Form, Input,  Space, Button, DatePicker } from 'antd';
 import type { GetProps } from 'antd';
 import dayjs from 'dayjs';
 import {createTask} from '@/apis/task';
@@ -95,11 +95,13 @@ const Dashboard = () => {
   // 创建任务
   const handleCreateTask = async (values: any) => {
     try {
+      
       const res = await createTask({
         name: values.title,
         created_at: values.date[0].toISOString(),
         created_end: values.date[1].toISOString(),
         description: values.describe,
+        index: taskInfo.length + 1,
       });
       console.log('创建任务成功:', res);
       alert('任务创建成功');
@@ -137,9 +139,9 @@ const Dashboard = () => {
   const showDrawer = () => {
     setOpen(true);
   };
-  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    console.log('Change:', e.target.value);
-  };
+  // const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  //   console.log('Change:', e.target.value);
+  // };
 
   return (
     <DndProvider backend={HTML5Backend}>

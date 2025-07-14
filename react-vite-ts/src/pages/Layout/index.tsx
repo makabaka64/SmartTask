@@ -55,15 +55,15 @@ const MainLayout: React.FC = () => {
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
-      label: '任务看板',
+      label: '任务管理',
+    },
+    {
+      key: '/task',
+      icon: <BarChartOutlined />,
+      label: '实时看板',
     },
     {
       key: '/report',
-      icon: <BarChartOutlined />,
-      label: '数据统计',
-    },
-    {
-      key: '/message',
       icon: <MessageOutlined />,
       label: '消息中心',
     },
