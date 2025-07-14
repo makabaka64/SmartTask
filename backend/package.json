@@ -21,7 +21,9 @@
     "jsonwebtoken": "^8.5.1",
     "mysql": "^2.18.1",
     "mysql2": "^3.14.1",
+    "node-schedule": "^2.1.1",
     "nodemailer": "^7.0.3",
-    "nodemailer-smtp-transport": "^2.7.4"
+    "nodemailer-smtp-transport": "^2.7.4",
+    "socket.io": "^4.8.1"
   }
 }

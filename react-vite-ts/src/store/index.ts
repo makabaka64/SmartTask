@@ -2,11 +2,13 @@
 import { configureStore } from '@reduxjs/toolkit'
 import userReducer from './modules/user'
 import taskReducer from './modules/taskSlice'
+import NotificationReducer from './modules/notification'
 
 const store = configureStore({
   reducer: {
     user: userReducer,
-    task: taskReducer
+    task: taskReducer,
+    notification: NotificationReducer
   }
 })
 

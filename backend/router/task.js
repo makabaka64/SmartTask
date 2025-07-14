@@ -26,8 +26,12 @@ router.post('/invite/:taskId', checkPermission('taskId', 'member_manage'), taskH
 // 同意邀请
 router.post('/accept/:taskId', taskHandler.acceptInvitation);
 
+
 router.post('/status/:taskId', taskHandler.changeStatus)
 
 router.post('/tasksort', taskHandler.taskSort)
+
+// 获取通知
+router.get('/notification', taskHandler.getNotificationList);
 
 module.exports = router;
