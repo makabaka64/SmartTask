@@ -25,7 +25,25 @@ export const deleteTask = (id: number): Promise<TaskDetail> => {
 export const inviteMember = (id: number, email: string): Promise<{ status: number; message: string }> => {
     return request.post(`/task/invite/${id}`, { email });
 }
+// 接受邀请
+export const acceptInvitation = (notificationId: number) => {
+  return request.post('/task/accept', { notificationId });
+};
+// 获取任务成员列表
+export const getTaskMembers = (taskId: number) => {
+  return request.get(`/task/members/${taskId}`);
+};
+// 删除成员
+export const removeMember = (taskId: number, userId: number) => {
+  return request.delete(`/task/remove/${taskId}`, {
+    data: { userId }
+  });
+};
 // 获取通知
 export const fetchNotifications = (): Promise<{ status: number; data: Notification[] }> => {
   return request.get('/task/notification');
 };
+// 拖拽排序
+export const taskSort = (data: any) => {
+  return request.post('/task/tasksort', data)
+}
