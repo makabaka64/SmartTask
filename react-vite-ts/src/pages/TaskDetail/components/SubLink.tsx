@@ -1,33 +1,24 @@
-import React from "react"
-import { UploadOutlined } from '@ant-design/icons';
-import type { UploadProps } from 'antd';
-import { Button, Upload } from 'antd';
+import { Button } from 'antd';
+import { deleteTask } from '@/apis/task';
+import { useNavigate } from 'react-router-dom';
+import { DeleteOutlined} from '@ant-design/icons'
 interface Props {
   taskId: number;
-  canSubmit: boolean;
+  canDelete: boolean;
 }
-const props: UploadProps = {
-  action: '//jsonplaceholder.typicode.com/posts/',
-  listType: 'picture',
-  previewFile(file) {
-    console.log('Your upload file:', file);
-    // Your process logic. Here we just mock to the same file
-    return fetch('https://next.json-generator.com/api/json/get/4ytyBoLK8', {
-      method: 'POST',
-      body: file,
-    })
-      .then((res) => res.json())
-      .then(({ thumbnail }) => thumbnail);
-  },
-};
 
-const SubLink = ({ taskId, canSubmit }: Props) => {
+
+const SubLink = ({ taskId, canDelete }: Props) => {
+  const navigate = useNavigate();
+  const handleDelete = async () => {
+    if (!canDelete) return;
+    try { await deleteTask(taskId!); alert('删除成功'); navigate(-1); }
+    catch { alert('删除失败'); }
+  };
   return (
     <div className="sub-link">
       <div className="add-link">
-        <Upload {...props}>
-          <Button icon={<UploadOutlined />} disabled={!canSubmit}>Upload</Button>
-        </Upload>
+        <Button danger icon={<DeleteOutlined />} disabled={!canDelete} onClick={handleDelete}>删除</Button>
       </div>
     </div>
   )

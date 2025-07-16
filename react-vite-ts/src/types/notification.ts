@@ -5,7 +5,7 @@ export interface Notification {
     task_id: number;
     type: 'reminder' | 'invite';
     message: string;
-    status: 'unread' | 'read' | 'accepted' | 'rejected';
+    status: 'pending' | 'accepted' | 'read';
     created_at: string
   }
   

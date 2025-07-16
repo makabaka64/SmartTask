@@ -38,12 +38,6 @@ const MainLayout: React.FC = () => {
 
   const items: MenuProps['items'] = [
     {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: '个人中心',
-      onClick: () => navigate('/profile'),
-    },
-    {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: '退出登录',
@@ -58,7 +52,7 @@ const MainLayout: React.FC = () => {
       label: '任务管理',
     },
     {
-      key: '/task',
+      key: '/barchart',
       icon: <BarChartOutlined />,
       label: '实时看板',
     },
@@ -66,6 +60,12 @@ const MainLayout: React.FC = () => {
       key: '/report',
       icon: <MessageOutlined />,
       label: '消息中心',
+    },
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: '个人中心',
+      onClick: () => navigate('/profile'),
     },
   ];
 

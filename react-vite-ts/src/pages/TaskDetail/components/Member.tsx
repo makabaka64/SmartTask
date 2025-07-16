@@ -1,48 +1,35 @@
-import  { useState, useEffect } from "react";
-import { CloseOutlined, SendOutlined } from '@ant-design/icons'
-import { Pagination } from 'antd';
-import type { PaginationProps } from 'antd';
-import { inviteMember } from '@/apis/task';
+import  { useState,useEffect } from "react";
+import { Button,Tag } from 'antd';
+import {  SendOutlined ,DeleteOutlined} from '@ant-design/icons'
+import { inviteMember, getTaskMembers, removeMember} from '@/apis/task';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store';
 
 interface Props {
   taskId: number;
   canManage: boolean;
 }
-const Member = ({ taskId}: Props) => {
+const Member = ({ taskId, canManage}: Props) => {
   const [ email, setEmail ] = useState('')
-  // const [memList, setMemList] = useState([
-  //   {id: 1},
-  //   {id: 2},
-  //   {id: 3},
-  //   {id: 4},
-  //   {id: 5},
-  //   {id: 6},
-  //   {id: 7},
-  //   {id: 8},
-  //   {id: 9},
-  //   {id: 10},
-  //   {id: 11},
-  //   {id: 12},
-  //   {id: 13},
-  //   {id: 14}])
-  const [ memList, setMemList ] = useState(
-    Array.from({length: 14 }, (_, i) => ({id: i + 1}))
-  )
-  const [readList, setReadList] = useState<any[]>([])
+  const [memList, setMemList] = useState<any[]>([]);
+  const currentUserId = useSelector((state: RootState) => state.user.userInfo?.id);
+    // 拉取成员列表
+    const fetchMembers = async () => {
+      try {
+        const res = await getTaskMembers(taskId);
+        if (res.status === 0) {
+          setMemList(res.data);
+        }
+      } catch (err) {
+        console.error('获取成员失败', err);
+      }
+    };
+  
+    // 初次加载
+    useEffect(() => {
+      fetchMembers();
+    }, [taskId]);
 
-  const onChange: PaginationProps['onChange'] = (current, pageSize) => {
-    console.log(current, pageSize);
-    const list = []
-    for(let i = (current-1)*pageSize; i < memList.length && i < current*pageSize; i++) {
-      list.push(memList[i])
-    }
-    
-    setReadList(list)
-  };
-
-  useEffect(() => {
-    onChange(1,5)
-  },[memList])
    // 邀请成员
   const handleInvite = async () => {
     if(!email) {
@@ -50,14 +37,29 @@ const Member = ({ taskId}: Props) => {
       return
     }
     try {
-      const res = await inviteMember(taskId, email)
-     console.log(res);
+      await inviteMember(taskId, email)
+      alert('已发送邀请')
+      setEmail(''); 
+      fetchMembers(); // 刷新成员列表
      
     }catch(err) {
       console.log(err);
     }
   }
-  
+
+  // 删除成员
+  const handleRemove = async (userId: number) => {
+    if (userId === currentUserId) return alert('不能删除自己');
+    try {
+      await removeMember(taskId, userId);
+      alert('删除成功');
+      fetchMembers();
+    } catch (err) {
+      console.error('删除失败', err);
+    }
+  };
+
+
   return (
     <div className="member-manage">
       <div className="members">
@@ -65,32 +67,51 @@ const Member = ({ taskId}: Props) => {
           <div className="func-add">
             <div className="label">添加成员：</div>
             <div className="email-input">
-              <input type="text" name="" id="" />
+            <input
+                type="email"
+                placeholder="请输入用户邮箱"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
             <div className="send-btn">
-              <button>发送邀请 <SendOutlined /></button>
+              <button disabled={!canManage} onClick={handleInvite}>发送邀请 <SendOutlined /></button>
             </div>
           </div>
         </div>
-        {readList.map((item: any) => {
+        {memList.map((item: any) => {
+          const isCreator = item.role === 'admin';
+          const canDelete = canManage && item.id !== currentUserId && !isCreator;
+
           return (
             <div className="member-item" key={item.id}>
-              <div className="nickname">{item.id}</div>
-              <div className="delete"><CloseOutlined /></div>
+              <div className="avatar">
+                <img
+                  src={item.avater_url}
+                  alt={item.nickname}
+                  style={{ width: 30, height: 30, borderRadius: '50%' }}
+                />
+              </div>
+              <div className="nickname">
+                {item.nickname} 
+                <Tag color={isCreator ? 'red' : 'blue'} style={{ marginLeft: 8 }}>
+            {isCreator ? '创建者' : '成员'}
+          </Tag>
+              </div>
+              <div className="email">{item.email}</div>
+              
+                <div className="add-link">
+                  <Button danger disabled={!canDelete} icon={<DeleteOutlined />} size="small" onClick={() => handleRemove(item.id)}>
+                    删除
+                  </Button>
+                </div>
+              
             </div>
-          )
+          );
         })}
       </div>
-      <Pagination
-        showSizeChanger={false}
-        onChange={onChange}
-        align="center"
-        defaultCurrent={1}
-        pageSize={5}
-        total={memList.length}
-      />
     </div>
-  )
-}
+  );
+};
 
 export default Member

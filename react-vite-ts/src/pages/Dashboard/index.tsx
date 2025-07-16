@@ -13,7 +13,7 @@ import type { RootState,AppDispatch } from '@/store'
 import { Drawer, Form, Input,  Space, Button, DatePicker } from 'antd';
 import type { GetProps } from 'antd';
 import dayjs from 'dayjs';
-import {createTask} from '@/apis/task';
+import {createTask,taskSort} from '@/apis/task';
 import {fetchTaskList } from '@/store/modules/taskSlice';
 import type { TaskDetail } from '@/types/task';
 
@@ -61,6 +61,7 @@ const Dashboard = () => {
   ])
 
   const [form] = Form.useForm();
+  const userInfo = useSelector((state: RootState) => state.user.userInfo); 
   // 获取任务列表
   const taskInfo = useSelector((state: RootState) => state.task.tasklist) as TaskDetail[];
   useEffect(() => {
@@ -98,8 +99,8 @@ const Dashboard = () => {
       
       const res = await createTask({
         name: values.title,
-        created_at: values.date[0].toISOString(),
-        created_end: values.date[1].toISOString(),
+        created_at: dayjs(values.date[0]).format('YYYY-MM-DD HH:mm:ss'),
+        created_end: dayjs(values.date[1]).format('YYYY-MM-DD HH:mm:ss'),
         description: values.describe,
         index: taskInfo.length + 1,
       });
@@ -126,9 +127,11 @@ const Dashboard = () => {
   const onChangeIndex = (i: number) => {
     setTargetIndex(i)
   }
-  const moveItem = (i: any, List: any, setList: any) => {
+  // 移动任务
+  const moveItem =async (i: any, List: any, setList: any) => {
     const list = cloneDeep(List)
     const current = list[i];
+     await taskSort({oldIndex: list[i].item_index, newIndex: list[targetIndex].item_index, userId:userInfo.id })
     list.splice(i, 1)
     list.splice(targetIndex, 0, current)
     setList([...list])
@@ -147,10 +150,6 @@ const Dashboard = () => {
     <DndProvider backend={HTML5Backend}>
       <div className="container">
         <div className="nav">
-          <div className="search">
-            <input type="text" />
-            <div className="search-show"></div>
-          </div>
           <div className="add">
             <button onClick={showDrawer}><PlusOutlined /> 新建</button>
           </div>
@@ -191,17 +190,17 @@ const Dashboard = () => {
       onFinish={handleCreateTask}
       style={{ maxWidth: 700 }}
     >
-      <Form.Item name="title" label="标题" rules={[{ required: true }]}>
-        <Input placeholder='请输入项目标题' />
+      <Form.Item name="title" label="标题" rules={[{ required: true, message: '请输入任务标题' }]}>
+        <Input placeholder='请输入任务标题' />
       </Form.Item>
-      <Form.Item name="date" label="日期" rules={[{ required: true }]}>
+      <Form.Item name="date" label="日期" rules={[{ required: true, message: '请选择任务日期' }]}>
         <RangePicker disabledDate={disabledDate} />
       </Form.Item>
-      <Form.Item name="describe" label="任务描述" rules={[{ required: true }]}>
+      <Form.Item name="describe" label="任务描述" rules={[{ required: true, message: '请输入任务描述' }]}>
         <TextArea
           showCount
           allowClear
-          maxLength={100}
+          maxLength={1000}
           placeholder="任务描述"
           style={{ height: 120, resize: 'none' }}
         />
@@ -209,10 +208,10 @@ const Dashboard = () => {
       <Form.Item {...tailLayout}>
         <Space>
           <Button type="primary" htmlType="submit" >
-            Submit
+            提交
           </Button>
           <Button htmlType="button" onClick={onReset}>
-            Reset
+            重置
           </Button>
         </Space>
       </Form.Item>
