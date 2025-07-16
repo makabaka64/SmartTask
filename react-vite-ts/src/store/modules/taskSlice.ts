@@ -25,7 +25,11 @@ export const fetchTaskList = () => {
       try {
         const res = await getTaskList();
         console.log("获取任务详情成功:", res.data);
-        dispatch(setTaskList(res.data));
+        const list = res.data
+        const sortList = list?.sort((a:any, b:any) => { // 通过item_index进行排序
+          return a.item_index - b.item_index
+        })
+        dispatch(setTaskList(sortList));
       } catch (error) {
         console.error("获取任务详情失败:", error);
       }

@@ -19,7 +19,7 @@ exports.createTask = (req, res) => {
     const getAdminRoleId = 'SELECT id FROM role WHERE name = ?';
     db.query(getAdminRoleId, ['admin'],(err2, roleResult) => {
       if (err2) return res.cc(err2);
-      console.log('roleResult 查询结果：', roleResult); // 🔍 打印结果
+      console.log('roleResult 查询结果：', roleResult); 
       if (!roleResult || roleResult.length === 0) {
         console.error('未查到 admin 角色，role 表中可能没有符合条件的数据');
         return res.cc('admin角色不存在，请检查数据库数据');
@@ -104,8 +104,8 @@ exports.getTaskDetail = (req, res) => {
 // 更新任务
 exports.updateTask = (req, res) => {
   const taskId = req.params.taskId;
-  const { name, description } = req.body;
-  db.query('UPDATE task SET name=?, description=? WHERE id=?', [name, description, taskId], (err, result) => {
+  const { description,status } = req.body;
+  db.query('UPDATE task SET description=?, status=? WHERE id=?', [ description, status, taskId], (err, result) => {
     if (err) return res.cc(err);
     res.send({ status: 0, message: '更新成功' });
   });
@@ -193,69 +193,51 @@ exports.acceptInvitation = (req, res) => {
     });
   };
 
-  // 任务状态转换
-
-  exports.changeStatus = (req, res) => {
-    const { type = false, status, created_at, created_end, newTime } = req.body;
+  // 获取任务成员列表
+  exports.getTaskMembers = (req, res) => {
     const taskId = req.params.taskId;
-
-    // 提取数据库更新操作为独立函数
-    const updateTask = (fields, values) => {
-      const placeholders = fields.map((item) => {
-        return `${item}=?`
-      }).join(', ');
-      const sql = `UPDATE task SET ${placeholders} WHERE id = ?`;
-      
-      db.query(sql, [...values, taskId], (err, result) => {
-        if (err) return res.cc(err);
-        if (result.affectedRows !== 1) return res.cc('任务状态更新失败！');
-        res.cc('任务状态更新成功', 0);
+  
+    const sql = `
+      SELECT 
+     u.id, u.nickname, u.email, u.avater_url,
+     r.name AS role
+    FROM user_task_role utr
+    JOIN user u ON utr.user_id = u.id
+    JOIN role r ON utr.role_id = r.id
+    WHERE utr.task_id = ?
+    `;
+  
+    db.query(sql, [taskId], (err, results) => {
+      if (err) return res.cc(err);
+      res.send({
+        status: 0,
+        message: '获取任务成员成功',
+        data: results,
       });
-    };
-
-    // 处理有类型更新的情况
-    const handleTypeUpdate = () => {
-      if (type === 'created_at') {
-        if (newTime > created_at) return res.cc('任务状态异常');
-        return updateTask(['status', 'created_at'], [status, newTime]);
-      }
-
-      if (type === 'created_end') {
-        if (newTime >= created_at && newTime <= created_end) {
-          return updateTask(['status', 'created_end'], [status, newTime]);
-        }
-        
-        if (newTime < created_at) {
-          return updateTask(
-            ['status', 'created_at', 'created_end'], 
-            [status, newTime, newTime]
-          );
-        }
-        
-        return res.cc('任务状态异常');
-      }
-    };
-
-    // 处理无类型更新的情况（自动状态计算）
-    const handleAutoStatus = () => {
-      const currentTime = +new Date(newTime);
-      const startTime = +new Date(created_at);
-      const endTime = +new Date(created_end);
-
-      let newStatus = 1; // 默认为进行中
-      if (currentTime < startTime) newStatus = 0; // 未开始
-      else if (currentTime > endTime) newStatus = 2; // 已结束
-
-      updateTask(['status'], [newStatus]);
-    };
-
-    // 主执行逻辑
-    if (type) {
-      handleTypeUpdate();
-    } else {
-      handleAutoStatus();
-    }
+    });
   };
+
+  // 删除任务成员
+exports.removeMember = (req, res) => {
+  const taskId = parseInt(req.params.taskId);
+  const { userId } = req.body;
+  const currentUserId = req.user.id;
+
+  if (!userId) return res.cc('缺少成员 userId');
+
+  // 阻止删除自己
+  if (userId === currentUserId) {
+    return res.cc('不能删除自己');
+  }
+
+    const deleteSql = `DELETE FROM user_task_role WHERE user_id = ? AND task_id = ?`;
+    db.query(deleteSql, [userId, taskId], (delErr, result) => {
+      if (delErr) return res.cc(delErr);
+      if (result.affectedRows === 0) return res.cc('该用户不在任务中');
+      return res.cc('成员删除成功', 0);
+    });
+  }
+
 
   // 拖拽排序处理
   exports.taskSort = (req, res) => {
@@ -263,9 +245,9 @@ exports.acceptInvitation = (req, res) => {
     if(+oldIndex === +newIndex) {
       return res.cc('修改成功！', 0)
     }
-    const low = oldIndex < newIndex ? +oldIndex : +newIndex
-    const high = oldIndex > newIndex ? +oldIndex : +newIndex
-    const type = newIndex - oldIndex > 0 ? -1 : 1
+    const low = +oldIndex < +newIndex ? +oldIndex : +newIndex
+    const high = +oldIndex > +newIndex ? +oldIndex : +newIndex
+    const type = +newIndex < +oldIndex ? 1 : -1
     const offest = +newIndex
     const strsql = `select id from task where userId=? and item_index=?`
     db.query(strsql, [userId, +oldIndex], (err, result) => {
@@ -284,8 +266,6 @@ exports.acceptInvitation = (req, res) => {
           return res.cc('修改成功！', 0)
         })
       })
-      
-    
     })
     
   }

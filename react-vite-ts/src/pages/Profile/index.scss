@@ -4,10 +4,30 @@
   background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
 
   .profile-content {
+    display: block;
+    width: 100%;
     max-width: 800px;
+    margin-left: auto;
     margin: 0 auto;
+    box-sizing: border-box;
 
+
+    /* 确保Tabs容器有固定宽度 */
+      .profile-tabs-wrapper {
+        width: 100%;
+        min-height: 500px;
+        /* 防止加载时高度抖动 */
+    
+        .loading-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 300px;
+          width: 100%;
+        }
+      }
     .profile-tabs {
+      width: 100%;
       .ant-tabs-nav {
         margin-bottom: 1.5rem;
         
@@ -37,6 +57,7 @@
     }
 
     .profile-card {
+      width: 100%;
       background: rgba(255, 255, 255, 0.95);
       border-radius: 16px;
       margin-bottom: 1.5rem;

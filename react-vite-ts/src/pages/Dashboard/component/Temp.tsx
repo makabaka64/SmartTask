@@ -50,13 +50,13 @@ const Temp = (props: any) => {
               {item.name}
             </div>
             <div className="item-desc">
-            {item.status === '1' ? (
+            {item.status === 1 ? (
                <CheckCircleTwoTone twoToneColor="#52c41a" /> 
              ) : (
                <CloseCircleTwoTone twoToneColor="#f5222d" />
          )}
               <span className="status-text">
-                   {item.status === '1' ? ' 已完成' : ' 未完成'}
+                   {item.status === 1 ? ' 已完成' : ' 未完成'}
               </span>
   </div>
         </div>
