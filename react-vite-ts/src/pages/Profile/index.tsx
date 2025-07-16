@@ -1,5 +1,5 @@
 import React, { useState,useEffect } from 'react';
-import { Card, Avatar, Input, Button, Form,  Tabs, message, Upload } from 'antd';
+import { Card, Avatar, Input, Button, Form,  Tabs, message, Upload, Spin } from 'antd';
 import { UserOutlined, LockOutlined,  UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { useNavigate} from 'react-router-dom';
@@ -33,6 +33,7 @@ const Profile: React.FC = () => {
         create_time: dayjs(userInfo.create_time).format('YYYY-MM-DD HH:mm:ss'),
         avater_url: userInfo.avater_url,
       });
+     
     }
   }, [userInfo, form]);
   
@@ -143,7 +144,6 @@ const getBase64 = (file:File): Promise<string> =>
         <Form
           form={form}
           layout="vertical"
-          initialValues={userInfo}
           onFinish={handleUpdateProfile}
           className="profile-form"
         >
@@ -240,11 +240,26 @@ const getBase64 = (file:File): Promise<string> =>
 return (
   <div className="profile-container">
     <div className="profile-content">
-      <Tabs 
+      {/* <Tabs 
         defaultActiveKey="1" 
         className="profile-tabs" 
         items={tabItems}  
-      />
+      /> */}
+   <div className="profile-tabs-wrapper">
+   {userInfo?.id ? (
+     <Tabs 
+       defaultActiveKey="1" 
+       className="profile-tabs"
+       items={tabItems}
+       // 添加动画效果确保宽度正确计算
+       animated={{ inkBar: true, tabPane: true }}
+     />
+   ) : (
+     <div className="loading-container">
+       <Spin tip="加载用户信息..." />
+     </div>
+   )}
+ </div>
       <Button ghost onClick={() => navigate('/')}>返回首页</Button>
     </div>
   </div>

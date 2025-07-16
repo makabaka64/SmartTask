@@ -21,13 +21,18 @@ router.delete('/delete/:taskId', checkPermission('taskId', 'delete_task'), taskH
 // 邀请成员
 router.post('/invite/:taskId', checkPermission('taskId', 'member_manage'), taskHandler.inviteUser);
 
-// 移除成员
-// router.delete('/remove/:taskId', checkPermission('taskId', 'member_manage'), taskHandler.removeMember);
+// 删除成员
+router.delete('/remove/:taskId', checkPermission('taskId', 'member_manage'), taskHandler.removeMember);
+
 // 同意邀请
-router.post('/accept/:taskId', taskHandler.acceptInvitation);
+router.post('/accept', taskHandler.acceptInvitation);
+
+// 获取成员列表
+router.get('/members/:taskId', taskHandler.getTaskMembers);
 
 
-router.post('/status/:taskId', taskHandler.changeStatus)
+
+// router.post('/status/:taskId', taskHandler.changeStatus)
 
 router.post('/tasksort', taskHandler.taskSort)
 

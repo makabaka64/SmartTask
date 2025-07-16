@@ -6,7 +6,7 @@ export interface TaskDetail {
     description?: string;
     created_at?: string;
     created_end?: string;
-    status?:  '0' | '1' | '2';
+    status?:  number; // 任务状态：0-未完成，1-已完成
     permissions?: string[]; // 任务权限列表
     index?: number;
     data?: any;

@@ -1,6 +1,6 @@
 import{ useEffect } from 'react';
 import { useDispatch,useSelector } from 'react-redux';
-import { fetchNotifications } from '@/apis/task';
+import { fetchNotifications,acceptInvitation } from '@/apis/task';
 import { Card, Tabs, Empty, Avatar ,Button} from 'antd';
 import { UserOutlined, BellOutlined } from '@ant-design/icons';
 import type { Notification } from '@/types/notification';
@@ -11,6 +11,7 @@ import { setNotificationList } from '@/store/modules/notification';
 const Report = () => {
   const dispatch = useDispatch();
   const notifications = useSelector((state: RootState) => state.notification.list);
+  const avater_url = useSelector((state: RootState) => state.user.userInfo?.avater_url);
   const reminders = notifications.filter(
     (notification: Notification) => notification.type === 'reminder'
   );
@@ -32,12 +33,20 @@ const Report = () => {
   }, [dispatch]);
 
   // 接受邀请
-  const handleAccept = async(noti:Notification) => {
-    // const res = await fetchNotifications();
-    // if (res.status === 0) {
-    //   // 更新通知列表
-    //   dispatch(setNotificationList(res.data));
-    // }
+  const handleAccept = async(notification: Notification) => {
+    try{
+      const res = await acceptInvitation(notification.id);
+      if (res.status === 0) {
+        const listRes = await fetchNotifications();
+        if (listRes.status === 0) {
+          dispatch(setNotificationList(listRes.data));
+        }
+      } else {
+        alert(res.data.message || '接受邀请失败');
+      }
+    } catch (error) {
+      alert('接受邀请失败，请稍后重试');
+    }
   }
   const tabItems = [
     {
@@ -50,7 +59,7 @@ const Report = () => {
       ),
       children: (
         reminders.length === 0 ? (
-          <Empty description="暂无系统通知" />
+          <Empty className='empty' description="暂无系统通知" />
         ) : (
           reminders.map((notification) => (
             <Card key={notification.id} className="report-card">
@@ -82,8 +91,10 @@ const Report = () => {
         ) : (
           invites.map((notification) => (
             <Card key={notification.id} className="report-card">
+         <div className='card-content'>
+             <div className='left-section'>
               <div className="avatar-section">
-                <Avatar icon={<UserOutlined />} />
+                <Avatar src={avater_url} />
                 <div className="message-content">
                   <div className="message-text">{notification.message}</div>
                   <div className="message-time">
@@ -91,12 +102,17 @@ const Report = () => {
                   </div>
                 </div>
               </div>
-              {notification.status === 'unread' && (
+              </div>
+
+              <div className="right-section">
+              {notification.status === 'pending' && (
                 <Button type="primary" size="small" onClick={() => handleAccept(notification)}>接受邀请</Button>
               )}
               {notification.status === 'accepted' && (
                 <Button size="small" disabled>已加入</Button>
               )}
+              </div>
+              </div>
             </Card>
           ))
         )
@@ -106,7 +122,7 @@ const Report = () => {
 
   return (
     <div className="report-container">
-      <Tabs defaultActiveKey="1" className="report-tabs" items={tabItems} />
+      <Tabs defaultActiveKey="1" className="report-tabs"  items={tabItems} />
     </div>
   );
 };

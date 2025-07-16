@@ -171,3 +171,22 @@ input, button{
     }
   }
 }
+
+// 移动端适配
+@media screen and (max-width: 768px) {
+  .task-container{
+    // width: 90%;
+    .content-box{
+      width: 90%;
+      .describe1 {
+          display: none; }
+    }
+    .label {
+      display: none;
+    }
+    
+  }
+ .classify{
+  display: none;
+ }
+}

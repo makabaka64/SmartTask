@@ -5,7 +5,6 @@ import {
   CalendarOutlined,
   CarryOutOutlined,
   CheckCircleOutlined,
-  MinusCircleOutlined
 } from '@ant-design/icons'
 import { Avatar, Tabs, Dropdown,Spin} from 'antd';
 import type { TabsProps, MenuProps } from 'antd';
@@ -21,16 +20,16 @@ import { usePermission } from '@/hooks/usePermission';
 import type { TaskDetail as TaskDetailType } from '@/types/task';
 import dayjs from 'dayjs';
 import { useSelector } from 'react-redux'
-import { getTaskDetail } from '@/apis/task';
-import { deleteTask } from '@/apis/task';
+import { getTaskDetail,editTask } from '@/apis/task';
 
 
 const TaskDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [task, setTask] = useState<TaskDetailType | null>(null);
-  const [status, setStatus] = useState<{ icon: React.ReactNode; name: string }>({ icon: <ClockCircleOutlined />, name: '未开始' });
+  const [status, setStatus] = useState<{ icon: React.ReactNode; name: string }>({  icon: <ClockCircleOutlined />, name: '未完成' });
   const [loading, setLoading] = useState<boolean>(true);
+  const [isStatusUpdating, setIsStatusUpdating] = useState<boolean>(false); // 状态更新中
  // 权限标识
  const canView = usePermission(task, 'view_task');
  const canEdit = usePermission(task, 'edit_task');
@@ -49,7 +48,7 @@ const TaskDetail = () => {
     const taskId = parseInt(id, 10);
     setLoading(true);
     getTaskDetail(taskId).then(res => {
-      setTask(res.data);
+      // setTask(res.data);
       setTask({
         ...res.data,
         created_at:dayjs(res.data.created_at).format('YYYY-MM-DD '),
@@ -58,15 +57,12 @@ const TaskDetail = () => {
       })
       setLoading(false);
       
-      switch(res.status) {
-        case '0':
-            setStatus({ icon: <MinusCircleOutlined />, name: '未开始' });
+      switch(res.data.status) {
+        case 0:
+            setStatus({ icon: <ClockCircleOutlined />, name: '未完成' });
             break;
-          case '1':
-            setStatus({ icon: <ClockCircleOutlined />, name: '进行中' });
-            break;
-          case '2':
-            setStatus({ icon: <CheckCircleOutlined />, name: '已结束' });
+          case 1:
+            setStatus({ icon: <CheckCircleOutlined />, name: '已完成' });
             break;
           default:
             break;
@@ -79,26 +75,59 @@ const TaskDetail = () => {
 
   if (loading) return <Spin tip="加载中..." />;
   if (!task || !canView) return <div className="task-container">无权限查看或任务不存在。</div>;
-  const handleDelete = async () => {
-    if (!canDelete) return;
-    try { await deleteTask(task.id!); alert('删除成功'); navigate(-1); }
-    catch { alert('删除失败'); }
-  };
+  
 
-  // 回退
   const handleClose = () => navigate(-1);
 
+
+ // 切换任务状态
+ const handleStatusChange = async (newStatus:number) => {
+  if (!task || !canEdit || isStatusUpdating) return;
+  
+  setIsStatusUpdating(true);
+  
+  const statusInfo = 
+    newStatus === 0 
+      ? { icon: <ClockCircleOutlined />, name: '未完成' } 
+      : { icon: <CheckCircleOutlined />, name: '已完成' };
+  
+  try {
+    await editTask(task.id!, { 
+      status: newStatus, 
+      description: task.description 
+    });
+    
+    setStatus(statusInfo);
+    setTask({ ...task, status: newStatus });
+    
+    alert('任务状态更新成功');
+  } catch (error) {
+    alert('更新失败，请重试');
+  } finally {
+    setIsStatusUpdating(false);
+  }
+};
     // 状态菜单
   const statusMenu: MenuProps['items'] = [
-    { key: '0', label: '未开始', icon: <MinusCircleOutlined />, onClick: () => canEdit && setStatus({ icon: <MinusCircleOutlined />, name: '未开始' }) },
-    { key: '1', label: '进行中', icon: <ClockCircleOutlined />, onClick: () => canEdit && setStatus({ icon: <ClockCircleOutlined />, name: '进行中' }) },
-    { key: '2', label: '已结束', icon: <CheckCircleOutlined />, onClick: () => canEdit && setStatus({ icon: <CheckCircleOutlined />, name: '已结束' }) },
+    { 
+      key: '0', 
+      label: '未完成', 
+      icon: <ClockCircleOutlined />, 
+      onClick: () => handleStatusChange(0) 
+    },
+    { 
+      key: '1', 
+      label: '已完成', 
+      icon: <CheckCircleOutlined />, 
+      onClick: () => handleStatusChange(1) 
+    },
   ];
+
    // Tab 列表
    const tabItems: TabsProps['items'] = [
     { key: '1', label: '描述', children: <TaskDescribe task={task} canEdit={canEdit} /> },
-    canManageMembers ? { key: '2', label: '成员', children: <Member taskId={task.id!} canManage={canManageMembers}/> } : null ,
-    canEdit ? { key: '3', label: '提交', children: <SubLink taskId={task.id!} canSubmit={canEdit} /> } : null,
+    { key: '2', label: '成员', children: <Member taskId={task.id!} canManage={canManageMembers}/> }  ,
+    canDelete ? { key: '3', label: '删除', children: <SubLink taskId={task.id!} canDelete={canDelete} /> } : null,
   ].filter(Boolean) as TabsProps['items'];
   return (
     <div className="task-container">
@@ -107,13 +136,16 @@ const TaskDetail = () => {
       {task?.name}
       </div>
       <div className="status-area">
-        {/* 编辑权限下可切换状态 */}
         <WithPermission task={task} required="edit_task">
           <Dropdown menu={{ items: statusMenu }} placement="bottomLeft">
             <div className="status area-item">
-              <div className="logo">{status.icon}</div>
+               {isStatusUpdating ? (
+                <Spin size="small" />
+              ) : (
+                <div className="logo">{status.icon}</div>
+              )}
               <div className="content-box">
-                <div className="describe">{status.name}</div>
+                <div className="describe1">{status.name}</div>
                 <div className="classify">当前状态</div>
               </div>
             </div>
@@ -124,7 +156,7 @@ const TaskDetail = () => {
             <Avatar icon={<UserOutlined />} src={userInfo?.avater_url}/>
           </div>
           <div className="content-box">
-            <div className="describe">{userInfo?.nickname}</div>
+            <div className="describe1">{userInfo?.nickname}</div>
             <div className="classify">负责人</div>
           </div>
         </div>

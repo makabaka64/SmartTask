@@ -16,6 +16,7 @@ const Report = lazy(() => import("@/pages/Report"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const NotFound = lazy(() => import("@/pages/NotFound"))
 const Layout = lazy(() => import("@/pages/Layout"));
+const BarChart = lazy(() => import("@/pages/BarChart"));
 
 
 // 私有路由守卫组件
@@ -37,6 +38,7 @@ const AppRouter = () => {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="task/:id" element={<TaskDetail />} />
             <Route path="report" element={<Report />} />
+            <Route path="barchart" element={<BarChart />}/>
             {/* <Route path="profile" element={<Profile />} /> */}
           </Route>
           <Route path="profile" element={<Profile />} />
