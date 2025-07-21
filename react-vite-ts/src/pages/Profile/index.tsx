@@ -240,11 +240,6 @@ const getBase64 = (file:File): Promise<string> =>
 return (
   <div className="profile-container">
     <div className="profile-content">
-      {/* <Tabs 
-        defaultActiveKey="1" 
-        className="profile-tabs" 
-        items={tabItems}  
-      /> */}
    <div className="profile-tabs-wrapper">
    {userInfo?.id ? (
      <Tabs 

@@ -7,6 +7,8 @@ const expressJWT = require('express-jwt')
 const cookieParser = require('cookie-parser')
 const http = require('http')
 const server = http.createServer(app);
+require('dotenv').config();
+
 
 app.use(cookieParser())  // 注册解析 Cookie 的中间件
 app.use(cors({
@@ -40,8 +42,12 @@ app.use('/api', userRouter)
 // 用户信息
 const userinfoRouter = require('./router/userinfo')
 app.use('/my', userinfoRouter)
+// 任务相关路由
 const taskRouter = require('./router/task');
 app.use('/task', taskRouter);
+// openai 流式摘要
+const summaryRouter = require('./router/summary');
+app.use('/api', summaryRouter);
 
 // 定义错误级别的中间件
 app.use((err, req, res, next) => {
@@ -66,6 +72,9 @@ app.use((err, req, res, next) => {
     // 未知的错误
     return res.cc(err)
 })
+// 启动定时任务提醒
+require('./reminder');
+
 app.listen(3001, function () {
   console.log('api server running at http://localhost:3001')
 })

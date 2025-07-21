@@ -16,5 +16,8 @@ module.exports = {
 
     // 邮箱发送
     emailUser: '2926978724@qq.com',
-    emailPass: 'ospkpwnofrtddefh'
+    emailPass: 'ospkpwnofrtddefh',
+
+    // openai密钥
+    OPENAI_API_KEY: 'fk234227-w6AuHSOkXztt6W0GoteMGuVnqsegrmt6'
 }

@@ -61,6 +61,8 @@ const Report = () => {
         reminders.length === 0 ? (
           <Empty className='empty' description="暂无系统通知" />
         ) : (
+           <div className="card-list-container">
+          {
           reminders.map((notification) => (
             <Card key={notification.id} className="report-card">
               <div className="avatar-section">
@@ -73,7 +75,8 @@ const Report = () => {
                 </div>
               </div>
             </Card>
-          ))
+          ))}
+          </div>
         )
       ),
     },
@@ -87,9 +90,10 @@ const Report = () => {
       ),
       children: (
         invites.length === 0 ? (
-          <Empty description="暂无私信" />
+          <Empty className='empty' description="暂无私信" />
         ) : (
-          invites.map((notification) => (
+          <div className="card-list-container">
+          {invites.map((notification) => (
             <Card key={notification.id} className="report-card">
          <div className='card-content'>
              <div className='left-section'>
@@ -114,7 +118,8 @@ const Report = () => {
               </div>
               </div>
             </Card>
-          ))
+          ))}
+          </div>
         )
       ),
     },
