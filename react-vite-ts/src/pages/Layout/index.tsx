@@ -83,7 +83,7 @@ const MainLayout: React.FC = () => {
             onClick={() => setCollapsed(!collapsed)}
             className="trigger-button"
           />
-          <h1 className="logo">智能任务管理平台</h1>
+          <h1 className="logo">SmartTask</h1>
         </div>
         <div className="header-right">
           <Dropdown menu={{items}} placement="bottomRight">

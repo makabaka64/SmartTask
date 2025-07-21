@@ -1,0 +1,37 @@
+[33m9589989[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m 未完成数据页面
+[33mac06258[m 提交修改-7.14，数据页面未完全实现
+[33mc9f4e6f[m Merge pull request #1 from makabaka64/dashboard
+[33m2d379dc[m[33m ([m[1;31morigin/dashboard[m[33m)[m 消息通知模块大致内容
+[33m204fba3[m 拖拽排序后端逻辑
+[33m1fc03ec[m Merge branch 'main' of https://github.com/makabaka64/SmartTask
+[33m7e7ba8d[m 完成了任务详情页的渲染
+[33mb4019f7[m[33m ([m[1;32mmy-feature[m[33m)[m 主页任务模块
+[33m91cc155[m Merge branch 'main' of https://github.com/makabaka64/SmartTask into xjs
+[33mb287084[m 修改Bug，新增创建任务表单，完善拖拽排序
+[33mdb6283b[m 大概的RBAC权限管理
+[33m78ad8c2[m Merge branch 'xjs'
+[33m9bb503f[m 完成拖拽排序的逻辑
+[33m1d8c5f5[m 双token（access_token+refresh_token）实现
+[33mdd42374[m 首页样式修改
+[33m677477a[m Merge branch 'main' of https://github.com/makabaka64/SmartTask
+[33mcfa350c[m 首页样式修改
+[33m8c421ed[m 修改首页样式问题
+[33m8c33668[m 个人信息模块、封装一层响应处理工具处理api
+[33mbea9b08[m 连接数据库
+[33mb7ff85b[m 一些基本样式
+[33m41bd035[m 后端错误
+[33m48b15a5[m not fonud样式修改
+[33m72e63e7[m 完成了404页面
+[33mbe42919[m 后端验证问题
+[33m81bb991[m test测试
+[33mc053b29[m 添加了.gitignore
+[33mbfb1645[m Remove node_modules from repo and add to .gitignore
+[33m29e5d5b[m 修改了登录注册的一些小问题
+[33ma283924[m Remove node_modules from repo
+[33mffd5964[m 项目结构重整
+[33mb1563b4[m 个人信息后端部分
+[33m88a7a85[m 登录注册
+[33m8727b14[m 配置
+[33m5fd861e[m Merge remote-tracking branch 'origin/main'
+[33m8d25dea[m 初步配置
+[33m3bc4ce3[m Initial commit

@@ -94,7 +94,9 @@ const TaskDetail = () => {
   try {
     await editTask(task.id!, { 
       status: newStatus, 
-      description: task.description 
+      description: task.description ,
+      created_at: task.created_at,
+      created_end: task.created_end,
     });
     
     setStatus(statusInfo);
@@ -136,7 +138,7 @@ const TaskDetail = () => {
       {task?.name}
       </div>
       <div className="status-area">
-        <WithPermission task={task} required="edit_task">
+        <WithPermission task={task} required="view_task">
           <Dropdown menu={{ items: statusMenu }} placement="bottomLeft">
             <div className="status area-item">
                {isStatusUpdating ? (

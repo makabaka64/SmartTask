@@ -1,5 +1,6 @@
 import  { useState,useEffect } from "react";
-import { Button,Tag } from 'antd';
+import { Button,Tag ,Dropdown} from 'antd';
+import type { MenuProps } from 'antd'
 import {  SendOutlined ,DeleteOutlined} from '@ant-design/icons'
 import { inviteMember, getTaskMembers, removeMember} from '@/apis/task';
 import { useSelector } from 'react-redux';
@@ -10,16 +11,32 @@ interface Props {
   canManage: boolean;
 }
 const Member = ({ taskId, canManage}: Props) => {
+  
   const [ email, setEmail ] = useState('')
   const [memList, setMemList] = useState<any[]>([]);
   const currentUserId = useSelector((state: RootState) => state.user.userInfo?.id);
-    // 拉取成员列表
+  // const [role, setRole] = useState<'Participant' | 'user'>('user'); 
+  // 邀请菜单
+  const statusMenu: MenuProps['items'] = [
+    { 
+      key: '0', 
+      label: '管理员', 
+      onClick: () => handleInvite('Participant')
+    },
+    { 
+      key: '1', 
+      label: '成员', 
+      onClick: () => handleInvite('user')
+    },
+  ];  
+  // 拉取成员列表
     const fetchMembers = async () => {
       try {
         const res = await getTaskMembers(taskId);
         if (res.status === 0) {
           setMemList(res.data);
         }
+        
       } catch (err) {
         console.error('获取成员失败', err);
       }
@@ -29,15 +46,29 @@ const Member = ({ taskId, canManage}: Props) => {
     useEffect(() => {
       fetchMembers();
     }, [taskId]);
-
    // 邀请成员
-  const handleInvite = async () => {
+  const handleInvite = async (role:string) => {
     if(!email) {
       alert('请输入邮箱')
       return
     }
+    // 简单的邮箱格式验证
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      alert('请输入有效的邮箱地址');
+      return;
+    }
+   // 检查是否已存在
+    const existingMember = memList.find(member => member.email === email);
+    if (existingMember) {
+      alert('该成员已存在');
+      setEmail('');
+      return;
+    }
+   
     try {
-      await inviteMember(taskId, email)
+
+      await inviteMember(taskId, email, role)
       alert('已发送邀请')
       setEmail(''); 
       fetchMembers(); // 刷新成员列表
@@ -58,7 +89,7 @@ const Member = ({ taskId, canManage}: Props) => {
       console.error('删除失败', err);
     }
   };
-
+ 
 
   return (
     <div className="member-manage">
@@ -71,17 +102,35 @@ const Member = ({ taskId, canManage}: Props) => {
                 type="email"
                 placeholder="请输入用户邮箱"
                 value={email}
+                disabled={!canManage}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+         <Dropdown menu={{ items: statusMenu }} disabled={!canManage}  placement="bottomLeft">
             <div className="send-btn">
-              <button disabled={!canManage} onClick={handleInvite}>发送邀请 <SendOutlined /></button>
+              <button className="invite-btn" disabled >发送邀请 <SendOutlined /></button>
             </div>
+             </Dropdown>
           </div>
         </div>
         {memList.map((item: any) => {
           const isCreator = item.role === 'admin';
+          const isPart = item.role === 'Participant';
+          const isUser = item.role === 'user';
           const canDelete = canManage && item.id !== currentUserId && !isCreator;
+
+          let roleLabel = '';
+          let tagColor : 'red' | 'orange' | 'blue' = 'blue';
+
+          if (isCreator) {
+            roleLabel = '创建者';
+            tagColor = 'red';
+          } else if (isPart) {
+            roleLabel = '管理员';
+            tagColor = 'orange';
+          } else if (isUser) {
+            roleLabel = '成员';
+          }
 
           return (
             <div className="member-item" key={item.id}>
@@ -94,8 +143,8 @@ const Member = ({ taskId, canManage}: Props) => {
               </div>
               <div className="nickname">
                 {item.nickname} 
-                <Tag color={isCreator ? 'red' : 'blue'} style={{ marginLeft: 8 }}>
-            {isCreator ? '创建者' : '成员'}
+                <Tag color={tagColor} style={{ marginLeft: 8 }}>
+            {roleLabel}
           </Tag>
               </div>
               <div className="email">{item.email}</div>

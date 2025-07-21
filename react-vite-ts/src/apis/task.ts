@@ -22,8 +22,8 @@ export const deleteTask = (id: number): Promise<TaskDetail> => {
     return request.delete(`/task/delete/${id}`);
 }
 // 邀请成员
-export const inviteMember = (id: number, email: string): Promise<{ status: number; message: string }> => {
-    return request.post(`/task/invite/${id}`, { email });
+export const inviteMember = (id: number, email: string, role:string): Promise<{ status: number; message: string }> => {
+    return request.post(`/task/invite/${id}`, { email ,role});
 }
 // 接受邀请
 export const acceptInvitation = (notificationId: number) => {

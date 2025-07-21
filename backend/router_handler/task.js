@@ -1,5 +1,4 @@
 const db = require('../db/index');
-const { scheduleTaskReminder } = require('../reminder');
 // 时间格式转换函数
 function toMysqlDatetime(isoString) {
     return isoString ? isoString.replace('T', ' ').replace('Z', '').split('.')[0] : null;
@@ -30,13 +29,6 @@ exports.createTask = (req, res) => {
       const insertUserTaskRole = 'INSERT INTO user_task_role (user_id, task_id, role_id) VALUES (?, ?, ?)';
       db.query(insertUserTaskRole, [userId, taskId, adminRoleId], (err3) => {
         if (err3) return res.cc(err3);
-            // 截止日期提醒
-            scheduleTaskReminder({
-                id: taskId,
-                name,
-                created_end: createdEnd,
-              });
-
         res.send({ status: 0, message: '任务创建成功', taskId });
       });
     });
@@ -121,9 +113,8 @@ exports.deleteTask = (req, res) => {
 
 // 邀请用户加入任务（生成通知）
 exports.inviteUser = (req, res) => {
-    const { email } = req.body;
+    const { email,role } = req.body;
     const taskId = req.params.taskId;
-  
     // 1. 验证权限
     const checkPermission = `
       SELECT utr.user_id FROM user_task_role utr
@@ -143,16 +134,16 @@ exports.inviteUser = (req, res) => {
         if (userResults.length === 0) return res.cc('该用户不存在');
   
         const recipientId = userResults[0].id;
-        const message = `${req.user.nickname} 邀请你参与任务 ${taskId}`;
+        const message = `${req.user.nickname} 邀请你参与任务 ${taskId} , 角色为${role}`;
         // 3. 插入一条“邀请”通知
        
         const insertNotification = `
-          INSERT INTO notification (recipient_id, sender_id, task_id, type, message)
-          VALUES (?, ?, ?, 'invite', ?)
+          INSERT INTO notification (recipient_id, sender_id, task_id, type, message, target_role)
+          VALUES (?, ?, ?, 'invite', ?, ?)
         `;
   
        
-        db.query(insertNotification, [recipientId, req.user.id, taskId, message], (notiErr, notiRes) => {
+        db.query(insertNotification, [recipientId, req.user.id, taskId, message, role], (notiErr, notiRes) => {
           if (notiErr) return res.cc(notiErr);
           res.cc('邀请已发送，等待对方确认', 0);
         });
@@ -166,16 +157,17 @@ exports.acceptInvitation = (req, res) => {
     const userId = req.user.id;
   
     // 1. 获取通知详情
-    const getNoti = 'SELECT * FROM notification WHERE id = ? AND recipient_id = ? AND type = "invite" AND status = "pending"';
+    const getNoti = 'SELECT * FROM notification WHERE id = ? AND recipient_id = ?  AND type = "invite" AND status = "pending"';
     db.query(getNoti, [notificationId, userId], (err, results) => {
       if (err) return res.cc(err);
       if (results.length === 0) return res.cc('邀请不存在或已处理');
   
-      const { task_id } = results[0];
+      const { task_id, target_role } = results[0];
   
-      // 2. 获取 Participant 角色 ID
-      db.query('SELECT id FROM role WHERE name = "Participant"', (roleErr, roleResults) => {
+      // 2. 获取角色 ID
+      db.query('SELECT id FROM role WHERE name = ?',[target_role], (roleErr, roleResults) => {
         if (roleErr) return res.cc(roleErr);
+        if(roleResults.length===0) return res.cc('角色不存在');
         const roleId = roleResults[0].id;
   
         // 3. 插入用户任务关系
