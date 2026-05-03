@@ -1,43 +1,67 @@
-import  {  useState,useEffect,useMemo } from "react"
+import { useState, useEffect, useMemo } from 'react';
 import type { TaskDetail as TaskDetailType } from '@/types/task';
-import { Input, Button, Spin } from "antd"
+import { Input, Button, Spin } from 'antd';
 import { editTask } from '@/apis/task';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '@/store';
 import { streamSummary } from '@/services/summaryService';
-import { setTaskSummary,clearTaskSummary } from '@/store/modules/taskSlice'
+import { setTaskSummary, clearTaskSummary } from '@/store/modules/taskSlice';
 
 interface Props {
   task: TaskDetailType;
   canEdit: boolean;
 }
+
+const text = {
+  summary: 'AI \u6458\u8981',
+  summaryPlaceholder: '\uff08\u70b9\u51fb\u4e0b\u65b9\u6309\u94ae\u751f\u6210\uff09',
+  save: '\u63d0\u4ea4',
+  reset: '\u91cd\u7f6e',
+  generate: 'AI \u751f\u6210\u6458\u8981',
+  saveSuccess: '\u4fdd\u5b58\u6210\u529f\u3002',
+  saveFailed: '\u4fdd\u5b58\u5931\u8d25\u3002',
+  summaryFailed: '\u751f\u6210\u5931\u8d25\u3002',
+  descriptionPlaceholder: '\u8bf7\u63cf\u8ff0\u4efb\u52a1\u5185\u5bb9'
+};
+
 const TaskDescribe = ({ task, canEdit }: Props) => {
   const dispatch = useDispatch();
   const taskSummary = useSelector((state: RootState) => state.task.taskSummary);
   const summary = useMemo(() => {
-    return taskSummary [task.id!] || { summary: '' };
-  }, [task.id, taskSummary]); 
-  const [ desc, setDesc] = useState(task.description)
+    return taskSummary[task.id!] || { summary: '' };
+  }, [task.id, taskSummary]);
+  const [desc, setDesc] = useState(task.description);
   const [loading, setLoading] = useState(false);
-  const [tempSummary, settempSummary] = useState('');
+  const [tempSummary, setTempSummary] = useState('');
 
-  // 更新任务描述
   useEffect(() => {
     setDesc(task.description);
-    settempSummary(summary.summary || '');
-  }, [task.description, summary]);  
+    setTempSummary(summary.summary || '');
+  }, [task.description, summary]);
 
   const handleEdit = async () => {
-    if (!canEdit) return;
-    try { await editTask(task.id!, { description: desc , status: task.status, created_at: task.created_at,created_end: task.created_end}); alert('保存成功'); }
-    catch { alert('保存失败'); }
-  }
+    if (!canEdit) {
+      return;
+    }
+    try {
+      await editTask(task.id!, {
+        description: desc,
+        status: task.status,
+        created_at: task.created_at,
+        created_end: task.created_end
+      });
+      alert(text.saveSuccess);
+    } catch {
+      alert(text.saveFailed);
+    }
+  };
 
-// ai生成摘要
   const handleGenerateSummary = () => {
-    if (!task.id) return;
+    if (!task.id) {
+      return;
+    }
 
-    settempSummary('');
+    setTempSummary('');
     setLoading(true);
     dispatch(clearTaskSummary(task.id));
 
@@ -45,75 +69,83 @@ const TaskDescribe = ({ task, canEdit }: Props) => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let closeStream = null;
 
-    closeStream =  streamSummary(
+    closeStream = streamSummary(
       task.id,
-      // 当收到 chunk 时，先放进 buffer
       (chunk) => {
         bufferRef.push(chunk);
         if (!timer) {
           timer = setTimeout(() => {
             if (bufferRef.length > 0) {
               const merged = bufferRef.join('');
-              settempSummary((prev)=>prev + merged);
-              dispatch(setTaskSummary({ taskId: task.id, summary: merged }))
-              bufferRef.length = 0; 
-              ;
+              setTempSummary((prev) => prev + merged);
+              dispatch(setTaskSummary({ taskId: task.id, summary: merged }));
+              bufferRef.length = 0;
             }
+            timer = null;
           }, 100);
         }
-        },
- // 完成时
-    () => {
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
+      },
+      () => {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        setLoading(false);
+      },
+      () => {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        setLoading(false);
+        alert(text.summaryFailed);
       }
-      setLoading(false);
-    },
-    // 出错时
-    () => {
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
+    );
+
+    return () => {
+      if (closeStream) {
+        closeStream();
       }
-      setLoading(false);
-      alert('生成失败');
-    }
-  );
-  return () => {
-    if (closeStream) closeStream(); 
-    if (timer) clearInterval(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   };
-};
-    
-   
 
   return (
     <div className="task-describe">
-       <div className="summary-box" style={{ marginBottom: 12 }}>
-        <div style={{ fontWeight: 'bold' }}>AI 摘要：</div>
+      <div className="summary-box">
+        <div className="summary-title">{text.summary}</div>
         {loading ? (
           <Spin />
         ) : (
-          <div style={{ whiteSpace: 'pre-wrap', minHeight: '1.5em' }}>{ tempSummary|| '（点击下方按钮生成）'}</div>
+          <div className="summary-content">
+            {tempSummary || text.summaryPlaceholder}
+          </div>
         )}
       </div>
+
       <div className="text">
         <Input.TextArea
-        value={desc ||'请描述任务内容'}
-        onChange={e => setDesc(e.target.value)}
-        rows={7}
-      />
-     </div>
-      <div className="sub-btn">
-        <Button type="primary" disabled={!canEdit} onClick={handleEdit}>提交</Button>
-        <Button htmlType="button" disabled={!canEdit}>重置</Button>
-        <Button type="dashed" onClick={handleGenerateSummary} loading={loading} style={{ marginLeft: 12 }}>
-          AI 生成摘要
-        </Button>
-      </div> 
-    </div>
-  )
-}
+          value={desc || text.descriptionPlaceholder}
+          onChange={(e) => setDesc(e.target.value)}
+          rows={8}
+        />
+      </div>
 
-export default TaskDescribe
+      <div className="sub-btn">
+        <Button type="primary" disabled={!canEdit} onClick={handleEdit}>
+          {text.save}
+        </Button>
+        <Button htmlType="button" disabled={!canEdit} onClick={() => setDesc(task.description)}>
+          {text.reset}
+        </Button>
+        <Button type="dashed" onClick={handleGenerateSummary} loading={loading}>
+          {text.generate}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default TaskDescribe;

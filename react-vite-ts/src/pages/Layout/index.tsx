@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Avatar, Dropdown, Button } from 'antd';
 import type { MenuProps } from 'antd';
 import { Outlet } from 'react-router-dom';
@@ -9,64 +9,72 @@ import {
   BarChartOutlined,
   MessageOutlined,
   UserOutlined,
-  LogoutOutlined,
+  LogoutOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch,useSelector } from 'react-redux';
-import type { RootState,AppDispatch } from '@/store'
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState, AppDispatch } from '@/store';
 import { fetchLogout, fetchUserInfo } from '@/store/modules/user';
+import classNames from 'classnames';
 import './index.scss';
 
 const { Header, Sider, Content } = Layout;
 
-
+const text = {
+  logout: '\u9000\u51fa\u767b\u5f55',
+  taskBoard: '\u4efb\u52a1\u9762\u677f',
+  analytics: '\u5b9e\u65f6\u770b\u677f',
+  messages: '\u6d88\u606f\u4e2d\u5fc3',
+  profile: '\u4e2a\u4eba\u4e2d\u5fc3',
+  userFallback: 'User'
+};
 
 const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const userInfo = useSelector((state: RootState) => state.user.userInfo)
+  const userInfo = useSelector((state: RootState) => state.user.userInfo);
   const navigate = useNavigate();
   const location = useLocation();
-   const dispatch: AppDispatch = useDispatch();
-   useEffect(() => {
+  const dispatch: AppDispatch = useDispatch();
+
+  useEffect(() => {
     dispatch(fetchUserInfo());
-  },[dispatch]);
+  }, [dispatch]);
 
   const handleLogout = () => {
     dispatch(fetchLogout());
     navigate('/login');
   };
 
-  const items: MenuProps['items'] = [
+  const dropdownItems: MenuProps['items'] = [
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: '退出登录',
-      onClick: handleLogout,
-    },
-  ]
+      label: text.logout,
+      onClick: handleLogout
+    }
+  ];
 
-  const menuItems = [
+  const menuItems: MenuProps['items'] = [
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
-      label: '任务管理',
+      label: text.taskBoard
     },
     {
       key: '/barchart',
       icon: <BarChartOutlined />,
-      label: '实时看板',
+      label: text.analytics
     },
     {
       key: '/report',
       icon: <MessageOutlined />,
-      label: '消息中心',
+      label: text.messages
     },
     {
-      key: 'profile',
+      key: '/profile',
       icon: <UserOutlined />,
-      label: '个人中心',
-      onClick: () => navigate('/profile'),
-    },
+      label: text.profile
+    }
   ];
 
   const handleMenuClick = ({ key }: { key: string }) => {
@@ -85,22 +93,26 @@ const MainLayout: React.FC = () => {
           />
           <h1 className="logo">SmartTask</h1>
         </div>
+
         <div className="header-right">
-          <Dropdown menu={{items}} placement="bottomRight">
+          <Dropdown menu={{ items: dropdownItems }} placement="bottomRight">
             <div className="user-info">
-              <Avatar icon={<UserOutlined />} src={userInfo.avater_url ? userInfo.avater_url : undefined}/>
-              <span className="username">{userInfo?.nickname}</span>
+              <Avatar
+                icon={<UserOutlined />}
+                src={userInfo.avater_url ? userInfo.avater_url : undefined}
+              />
+              <span className="username">{userInfo?.nickname || text.userFallback}</span>
             </div>
           </Dropdown>
         </div>
       </Header>
 
-      <Layout>
+      <Layout className="main-frame">
         <Sider
           trigger={null}
           collapsible
           collapsed={collapsed}
-          className="sider"
+          className={classNames('sider', { 'sider-hidden': collapsed })}
           breakpoint="lg"
           collapsedWidth={0}
           onBreakpoint={(broken) => {
@@ -112,14 +124,14 @@ const MainLayout: React.FC = () => {
           <Menu
             theme="light"
             mode="inline"
-            selectedKeys={[location.pathname]}
+            selectedKeys={[location.pathname === '/' ? '/dashboard' : location.pathname]}
             items={menuItems}
             onClick={handleMenuClick}
           />
         </Sider>
 
         <Content className="content">
-            <Outlet />
+          <Outlet />
         </Content>
       </Layout>
     </Layout>

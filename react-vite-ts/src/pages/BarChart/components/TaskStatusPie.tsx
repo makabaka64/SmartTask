@@ -1,28 +1,47 @@
-import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { TaskDetail } from '@/types/task';
-const COLORS = ['#82ca9d', '#f87171'];
+
+const COLORS = ['#1a73e8', '#ff8a65'];
 
 interface Props {
   tasks: TaskDetail[];
 }
 
 export const TaskStatusPie = ({ tasks }: Props) => {
-  const completed = tasks.filter(t => t.status === 1).length;
-  const pending = tasks.filter(t => t.status === 0).length;
+  const completed = tasks.filter((task) => task.status === 1).length;
+  const pending = tasks.filter((task) => task.status === 0).length;
 
   const data = [
-    { name: '已完成', value: completed },
-    { name: '未完成', value: pending }
+    { name: '\u5df2\u5b8c\u6210', value: completed },
+    { name: '\u672a\u5b8c\u6210', value: pending }
   ];
 
   return (
-    <PieChart width={400} height={280}>
-      <Pie data={data} dataKey="value" nameKey="name" outerRadius={90} label>
-        {/* // 使用 Cell 来设置每个扇区的颜色 */}
-        {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-      </Pie>
-      <Tooltip />
-      <Legend />
-    </PieChart>
+    <ResponsiveContainer width="100%" height={300}>
+      <PieChart>
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          innerRadius={60}
+          outerRadius={92}
+          paddingAngle={3}
+          labelLine={false}
+          label={({ percent = 0 }) => `${Math.round(percent * 100)}%`}
+        >
+          {data.map((entry) => (
+            <Cell key={entry.name} fill={COLORS[data.indexOf(entry) % COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip
+          contentStyle={{
+            borderRadius: 14,
+            border: '1px solid rgba(15, 23, 42, 0.08)',
+            boxShadow: '0 16px 30px rgba(15, 23, 42, 0.08)'
+          }}
+        />
+        <Legend verticalAlign="bottom" iconType="circle" />
+      </PieChart>
+    </ResponsiveContainer>
   );
 };

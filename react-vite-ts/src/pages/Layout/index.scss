@@ -1,170 +1,203 @@
 .main-layout {
-  min-height: 100vh;
-  background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+  --shell-bg:
+    radial-gradient(circle at top left, rgba(98, 147, 255, 0.12), transparent 28%),
+    radial-gradient(circle at 78% 12%, rgba(255, 177, 66, 0.1), transparent 26%),
+    linear-gradient(135deg, #f8fafc 0%, #eef4ff 44%, #f6f8fd 100%);
+  --shell-border: rgba(15, 23, 42, 0.08);
+  --shell-text: #101828;
+  --shell-muted: #667085;
+  --shell-accent: #1a73e8;
+  min-height: 100dvh;
+  background: var(--shell-bg);
+}
 
-  .header {
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  height: 76px;
+  padding: 0 24px;
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(20px);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  .header-left,
+  .header-right {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 0 24px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
+  }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
+  .header-left {
+    gap: 14px;
+  }
 
-      .trigger-button {
-        font-size: 18px;
-        color: #1890ff;
-        transition: all 0.3s ease;
+  .trigger-button {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    color: var(--shell-accent);
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(26, 115, 232, 0.12);
+    transition:
+      transform 180ms ease,
+      background 180ms ease,
+      color 180ms ease;
 
-        &:hover {
-          color: #40a9ff;
-          transform: scale(1.1);
-        }
-      }
-
-      .logo {
-        margin: 0;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #1890ff;
-        background: linear-gradient(120deg, #1890ff, #40a9ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-    }
-
-    .header-right {
-      .user-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        padding: 4px 8px;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-
-        &:hover {
-          background: rgba(24, 144, 255, 0.1);
-        }
-
-        .ant-avatar {
-          background: #1890ff;
-        }
-
-        .username {
-          color: #1890ff;
-          font-weight: 500;
-        }
-      }
+    &:hover {
+      color: #165ec4;
+      background: rgba(240, 246, 255, 0.96) !important;
+      transform: translateY(-1px);
     }
   }
 
-  .sider {
-    // position: fixed;
-    // left: 0;
-    // top: 64px;
-    // bottom: 0;
-    padding-top: 64px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-    z-index: 999;
+  .logo {
+    margin: 0;
+    color: var(--shell-text);
+    font-family: 'Segoe UI Variable Display', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 650;
+    letter-spacing: -0.04em;
+  }
 
-    .ant-menu {
-      background: transparent;
-      border-right: none;
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px 6px 6px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.66);
+    cursor: pointer;
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      background 180ms ease;
 
-      .ant-menu-item {
-        margin: 8px 16px;
-        border-radius: 8px;
-        transition: all 0.3s ease;
+    &:hover {
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+      transform: translateY(-1px);
+    }
 
-        &:hover {
-          background: rgba(24, 144, 255, 0.1);
-        }
+    .ant-avatar {
+      background: linear-gradient(135deg, #1a73e8, #4f8df8);
+      width: 30px;
+      height: 30px;
+      min-width: 30px;
+      font-size: 16px;
+    }
+  }
 
-        &.ant-menu-item-selected {
-          background: #1890ff;
-          color: white;
+  .username {
+    color: var(--shell-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+}
 
-          .anticon {
-            color: white;
-          }
-        }
+.main-frame {
+  background: transparent !important;
+}
+
+.sider {
+  margin: 18px 0 18px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.68) !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(20px);
+
+  .ant-layout-sider-children {
+    padding: 18px 0;
+  }
+
+  .ant-menu {
+    background: transparent;
+    border-inline-end: none;
+    padding: 4px 10px;
+
+    .ant-menu-item {
+      height: 48px;
+      margin: 8px 0;
+      border-radius: 16px;
+      color: #425466;
+      font-weight: 600;
+      transition:
+        background 180ms ease,
+        color 180ms ease,
+        transform 180ms ease;
+
+      &:hover {
+        color: #154fb2;
+        background: rgba(26, 115, 232, 0.08);
+        transform: translateX(2px);
+      }
+
+      &.ant-menu-item-selected {
+        background: linear-gradient(135deg, #1a73e8 0%, #4f8df8 100%);
+        color: #fff;
+        box-shadow: 0 16px 26px rgba(26, 115, 232, 0.18);
 
         .anticon {
-          font-size: 18px;
-          color: #1890ff;
+          color: #fff;
         }
       }
-    }
-  }
 
-  .content {
-    margin-top: 64px;
-    min-height: calc(100vh - 64px);
-    transition: all 0.3s ease;
-    background-color: #fff;
-    &.collapsed {
-      margin-left: 80px;
-    }
-  }
-
-  .mobile-drawer {
-    .ant-drawer-content-wrapper {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(8px);
-    }
-
-    .ant-drawer-header {
-      background: transparent;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    }
-
-    .ant-drawer-title {
-      color: #1890ff;
-      font-weight: 600;
+      .anticon {
+        color: #4972bb;
+        font-size: 18px;
+      }
     }
   }
 }
 
-// 移动端适配
-@media screen and (max-width: 768px) {
-  .main-layout {
-    .header {
-      padding: 0 16px;
+.sider.sider-hidden {
+  margin: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent !important;
+  backdrop-filter: none;
+}
 
-      .header-left {
-        .logo {
-          font-size: 1.2rem;
-        }
-      }
+.content {
+  padding: 18px;
+  background: transparent !important;
+  min-height: calc(100dvh - 76px);
+}
+
+@media (max-width: 991px) {
+  .sider {
+    position: fixed !important;
+    inset: 88px auto 18px 18px;
+    z-index: 999;
+  }
+
+  .content {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .header {
+    height: 68px;
+    padding: 0 14px;
+
+    .logo {
+      font-size: 1.28rem;
     }
 
-    // .sider {
-    //   display: none;
-    // }
-
-    .content {
-      margin-left: 0;
-      padding: 16px;
+    .user-copy {
+      display: none;
     }
   }
-} 
 
-// 移动端适配
-@media screen and (max-width: 768px) {
- .sider{
-  display: none;
- }
+  .content {
+    padding: 12px;
+  }
 }

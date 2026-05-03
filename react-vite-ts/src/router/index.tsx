@@ -39,8 +39,9 @@ const AppRouter = () => {
             <Route path="task/:id" element={<TaskDetail />} />
             <Route path="report" element={<Report />} />
             <Route path="barchart" element={<BarChart />}/>
+            <Route path="profile" element={<Profile />} />
           </Route>
-          <Route path="profile" element={<Profile />} />
+       
         </Route>
 
 

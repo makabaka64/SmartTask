@@ -1,17 +1,51 @@
-import React, { useState,useEffect } from 'react';
-import { Card, Avatar, Input, Button, Form,  Tabs, message, Upload, Spin } from 'antd';
-import { UserOutlined, LockOutlined,  UploadOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Card, Avatar, Input, Button, Form, Tabs, message, Upload, Spin } from 'antd';
+import { UserOutlined, LockOutlined, UploadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
-import { useNavigate} from 'react-router-dom';
-import { useDispatch,useSelector } from 'react-redux'
-import type { RootState,AppDispatch } from '@/store'
-import {updateUserInfo,updateAvatar,updatePassword} from '@/apis/user';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState, AppDispatch } from '@/store';
+import { updateUserInfo, updateAvatar, updatePassword } from '@/apis/user';
 import { fetchUserInfo } from '@/store/modules/user';
 import { removeToken } from '@/utils/index';
 import dayjs from 'dayjs';
 import './index.scss';
 
-
+const text = {
+  badge: '\u4e2a\u4eba\u4e2d\u5fc3',
+  title: '\u7ef4\u62a4\u4f60\u7684\u8d26\u53f7\u4fe1\u606f\u4e0e\u5b89\u5168\u8bbe\u7f6e',
+  description:
+    '\u5728\u8fd9\u91cc\u4fee\u6539\u6635\u79f0\u3001\u66f4\u65b0\u5934\u50cf\u3001\u7ba1\u7406\u5bc6\u7801\uff0c\u8ba9\u4e2a\u4eba\u8d26\u53f7\u72b6\u6001\u4fdd\u6301\u6e05\u6670\u548c\u53ef\u4fe1\u3002',
+  profile: '\u4e2a\u4eba\u4fe1\u606f',
+  security: '\u8d26\u53f7\u5b89\u5168',
+  joinedAt: '\u6ce8\u518c\u65f6\u95f4',
+  email: '\u90ae\u7bb1',
+  nickname: '\u6635\u79f0',
+  save: '\u4fdd\u5b58\u4fee\u6539',
+  updatePassword: '\u4fee\u6539\u5bc6\u7801',
+  uploadAvatar: '\u66f4\u6362\u5934\u50cf',
+  backHome: '\u8fd4\u56de\u9996\u9875',
+  nicknamePlaceholder: '\u8bf7\u8f93\u5165\u7528\u6237\u540d',
+  nicknameRequired: '\u8bf7\u8f93\u5165\u7528\u6237\u540d\u3002',
+  oldPassword: '\u5f53\u524d\u5bc6\u7801',
+  newPassword: '\u65b0\u5bc6\u7801',
+  confirmPassword: '\u786e\u8ba4\u65b0\u5bc6\u7801',
+  oldPasswordRequired: '\u8bf7\u8f93\u5165\u5f53\u524d\u5bc6\u7801\u3002',
+  newPasswordRequired: '\u8bf7\u8f93\u5165\u65b0\u5bc6\u7801\u3002',
+  confirmPasswordRequired: '\u8bf7\u786e\u8ba4\u65b0\u5bc6\u7801\u3002',
+  passwordMin: '\u5bc6\u7801\u957f\u5ea6\u4e0d\u80fd\u5c11\u4e8e 6 \u4f4d\u3002',
+  passwordMismatch: '\u4e24\u6b21\u8f93\u5165\u7684\u5bc6\u7801\u4e0d\u4e00\u81f4\u3002',
+  passwordPlaceholder: '\u8bf7\u8f93\u5165\u5bc6\u7801',
+  profileUpdated: '\u4e2a\u4eba\u4fe1\u606f\u66f4\u65b0\u6210\u529f\u3002',
+  updateFailed: '\u66f4\u65b0\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5\u3002',
+  passwordUpdated: '\u5bc6\u7801\u4fee\u6539\u6210\u529f\u3002',
+  uploadImageOnly: '\u53ea\u80fd\u4e0a\u4f20\u56fe\u7247\u6587\u4ef6\u3002',
+  avatarUpdated: '\u5934\u50cf\u4e0a\u4f20\u6210\u529f\u3002',
+  avatarFailed: '\u5934\u50cf\u4e0a\u4f20\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5\u3002',
+  loadingUser: '\u52a0\u8f7d\u7528\u6237\u4fe1\u606f...',
+  profileCount: '\u57fa\u7840\u4fe1\u606f',
+  safetyCount: '\u5b89\u5168\u8bbe\u7f6e'
+};
 
 const Profile: React.FC = () => {
   const [form] = Form.useForm();
@@ -19,43 +53,51 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const dispatch: AppDispatch = useDispatch();
+  const userInfo = useSelector((state: RootState) => state.user.userInfo);
 
-  // 获取用户信息
-  const userInfo = useSelector((state: RootState) => state.user.userInfo)
   useEffect(() => {
     dispatch(fetchUserInfo());
-  },[dispatch]);
+  }, [dispatch]);
+
   useEffect(() => {
     if (userInfo) {
       form.setFieldsValue({
         nickname: userInfo.nickname,
         email: userInfo.email,
         create_time: dayjs(userInfo.create_time).format('YYYY-MM-DD HH:mm:ss'),
-        avater_url: userInfo.avater_url,
+        avater_url: userInfo.avater_url
       });
-     
     }
   }, [userInfo, form]);
-  
-   // 修改个人信息
-   const handleUpdateProfile = async (values: any) => {
+
+  const stats = useMemo(
+    () => [
+      { label: text.profileCount, value: userInfo?.nickname ? 1 : 0 },
+      { label: text.safetyCount, value: 1 },
+      { label: text.email, value: userInfo?.email ? 1 : 0 },
+      { label: text.joinedAt, value: userInfo?.create_time ? 1 : 0 }
+    ],
+    [userInfo]
+  );
+
+  const handleUpdateProfile = async (values: any) => {
     try {
       setLoading(true);
-      const res = await updateUserInfo({ nickname: values.nickname,id: userInfo.id });
+      const res = await updateUserInfo({ nickname: values.nickname, id: userInfo.id });
       if (res.status === 0) {
-        alert('个人信息更新成功');
-        // 重新拉取用户信息
+        alert(text.profileUpdated);
         dispatch(fetchUserInfo());
       } else {
-        message.error(res.message || '更新失败');
+        message.error(res.message || text.updateFailed);
       }
     } catch (error) {
-      message.error('更新失败，请重试');
+      console.error(error);
+      message.error(text.updateFailed);
     } finally {
       setLoading(false);
     }
   };
-  // 修改密码
+
   const handleUpdatePassword = async (values: any) => {
     try {
       setLoading(true);
@@ -64,201 +106,212 @@ const Profile: React.FC = () => {
         newPwd: values.newPassword
       });
       if (res.status === 0) {
-        alert('密码修改成功');
+        alert(text.passwordUpdated);
         passwordForm.resetFields();
-        removeToken()
+        removeToken();
         navigate('/login');
       } else {
         alert(res.message);
       }
     } catch (error) {
-      message.error('修改失败，请重试');
+      console.error(error);
+      message.error(text.updateFailed);
     } finally {
       setLoading(false);
     }
   };
-  // 上传头像
- //  处理上传前图片预览（转 base64）
-const getBase64 = (file:File): Promise<string> => 
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
- // 上传头像
- const uploadProps: UploadProps = {
-  name:'avater_url',
-  showUploadList: false,
-  beforeUpload: async (file) => {
-    const isImage = file.type.startsWith('image/');
-    if (!isImage) {
-      message.error('只能上传图片文件！');
-      return Upload.LIST_IGNORE;
-    }
-    try{
-      const base64 = await getBase64(file);
-      const res = await updateAvatar({ avater_url: base64 });
-      if (res.status === 0) {
-        alert('头像上传成功');
-        dispatch(fetchUserInfo());
-      } else {
-        message.error(res.message || '头像上传失败');
+
+  const getBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+
+  const uploadProps: UploadProps = {
+    name: 'avater_url',
+    showUploadList: false,
+    beforeUpload: async (file) => {
+      const isImage = file.type.startsWith('image/');
+      if (!isImage) {
+        message.error(text.uploadImageOnly);
+        return Upload.LIST_IGNORE;
       }
-
-    }catch(error) {
-      message.error('上传失败，请重试');
-      return Upload.LIST_IGNORE;
+      try {
+        const base64 = await getBase64(file);
+        const res = await updateAvatar({ avater_url: base64 });
+        if (res.status === 0) {
+          alert(text.avatarUpdated);
+          dispatch(fetchUserInfo());
+        } else {
+          message.error(res.message || text.avatarFailed);
+        }
+      } catch (error) {
+        console.error(error);
+        message.error(text.avatarFailed);
+        return Upload.LIST_IGNORE;
+      }
+      return false;
     }
-    return false; // 阻止默认上传行为
-  }
- }
+  };
 
- const tabItems = [
-  {
-    key: '1',
-    label: (
-      <span>
-        <UserOutlined />
-        {' 个人信息'}
-      </span>
-    ),
-    children: (
-      <Card className="profile-card">
-        <div className="avatar-section">
-          <Upload {...uploadProps}>
-            <div className="avatar-wrapper">
-              <Avatar 
-                size={100} 
-                icon={<UserOutlined />} 
-                src={userInfo.avater_url || undefined} 
-              />
-              <div className="avatar-mask">
-                <UploadOutlined />
-                <div>更换头像</div>
+  const tabItems = [
+    {
+      key: '1',
+      label: (
+        <span>
+          <UserOutlined />
+          {` ${text.profile}`}
+        </span>
+      ),
+      children: (
+        <Card className="profile-card">
+          <div className="avatar-section">
+            <Upload {...uploadProps}>
+              <div className="avatar-wrapper">
+                <Avatar size={112} icon={<UserOutlined />} src={userInfo.avater_url || undefined} />
+                <div className="avatar-mask">
+                  <UploadOutlined />
+                  <div>{text.uploadAvatar}</div>
+                </div>
               </div>
-            </div>
-          </Upload>
+            </Upload>
+          </div>
+
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleUpdateProfile}
+            className="profile-form"
+          >
+            <Form.Item
+              name="nickname"
+              label={text.nickname}
+              rules={[{ required: true, message: text.nicknameRequired }]}
+            >
+              <Input placeholder={text.nicknamePlaceholder} />
+            </Form.Item>
+
+            <Form.Item name="email" label={text.email}>
+              <Input disabled />
+            </Form.Item>
+
+            <Form.Item name="create_time" label={text.joinedAt}>
+              <Input disabled />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={loading} block>
+                {text.save}
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      )
+    },
+    {
+      key: '2',
+      label: (
+        <span>
+          <LockOutlined />
+          {` ${text.security}`}
+        </span>
+      ),
+      children: (
+        <Card className="profile-card">
+          <Form
+            form={passwordForm}
+            layout="vertical"
+            onFinish={handleUpdatePassword}
+            className="profile-form"
+          >
+            <Form.Item
+              name="oldPassword"
+              label={text.oldPassword}
+              rules={[{ required: true, message: text.oldPasswordRequired }]}
+            >
+              <Input.Password placeholder={text.passwordPlaceholder} />
+            </Form.Item>
+
+            <Form.Item
+              name="newPassword"
+              label={text.newPassword}
+              rules={[
+                { required: true, message: text.newPasswordRequired },
+                { min: 6, message: text.passwordMin }
+              ]}
+            >
+              <Input.Password placeholder={text.passwordPlaceholder} />
+            </Form.Item>
+
+            <Form.Item
+              name="confirmPassword"
+              label={text.confirmPassword}
+              dependencies={['newPassword']}
+              rules={[
+                { required: true, message: text.confirmPasswordRequired },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('newPassword') === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error(text.passwordMismatch));
+                  }
+                })
+              ]}
+            >
+              <Input.Password placeholder={text.passwordPlaceholder} />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={loading} block>
+                {text.updatePassword}
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      )
+    }
+  ];
+
+  return (
+    <div className="profile-page">
+      <section className="profile-hero">
+        <div className="hero-copy">
+          <span className="hero-badge">{text.badge}</span>
+          <h2 className="hero-title">{text.title}</h2>
+          <p className="hero-description">{text.description}</p>
         </div>
 
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleUpdateProfile}
-          className="profile-form"
-        >
-          <Form.Item
-            name="nickname"
-            label="用户名"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          >
-            <Input placeholder="请输入用户名" />
-          </Form.Item>
+     
+      </section>
 
-          <Form.Item name="email" label="邮箱">
-            <Input disabled />
-          </Form.Item>
+      <section className="profile-stats">
+        {stats.map((item, index) => (
+          <div className="stat-card" key={item.label} style={{ animationDelay: `${index * 80}ms` }}>
+            <span className="stat-label">{item.label}</span>
+            <strong className="stat-value">{item.value}</strong>
+          </div>
+        ))}
+      </section>
 
-          <Form.Item name="create_time" label="注册时间">
-            <Input disabled />
-          </Form.Item>
-
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} block>
-              保存修改
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
-    ),
-  },
-  {
-    key: '2',
-    label: (
-      <span>
-        <LockOutlined />
-        {' 账户安全'}
-      </span>
-    ),
-    children: (
-      <Card className="profile-card">
-        <Form
-          form={passwordForm}
-          layout="vertical"
-          onFinish={handleUpdatePassword}
-          className="profile-form"
-        >
-          <Form.Item
-                  name="oldPassword"
-                  label="当前密码"
-                  rules={[{ required: true, message: '请输入当前密码' }]}
-                >
-                  <Input.Password placeholder="请输入当前密码" />
-                </Form.Item>
-
-                <Form.Item
-                  name="newPassword"
-                  label="新密码"
-                  rules={[
-                    { required: true, message: '请输入新密码' },
-                    { min: 6, message: '密码长度不能小于6位' }
-                  ]}
-                >
-                  <Input.Password placeholder="请输入新密码" />
-                </Form.Item>
-
-                <Form.Item
-                  name="confirmPassword"
-                  label="确认新密码"
-                  dependencies={['newPassword']}
-                  rules={[
-                    { required: true, message: '请确认新密码' },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        if (!value || getFieldValue('newPassword') === value) {
-                          return Promise.resolve();
-                        }
-                        return Promise.reject(new Error('两次输入的密码不一致'));
-                      },
-                    }),
-                  ]}
-                >
-                  <Input.Password placeholder="请确认新密码" />
-                </Form.Item>
-
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={loading} block>
-                    修改密码
-                  </Button>
-                </Form.Item>
-        </Form>
-      </Card>
-    ),
-  },
-];
-
-return (
-  <div className="profile-container">
-    <div className="profile-content">
-   <div className="profile-tabs-wrapper">
-   {userInfo?.id ? (
-     <Tabs 
-       defaultActiveKey="1" 
-       className="profile-tabs"
-       items={tabItems}
-       // 添加动画效果确保宽度正确计算
-       animated={{ inkBar: true, tabPane: true }}
-     />
-   ) : (
-     <div className="loading-container">
-       <Spin tip="加载用户信息..." />
-     </div>
-   )}
- </div>
-      <Button ghost onClick={() => navigate('/')}>返回首页</Button>
+      <section className="profile-panel">
+        {userInfo?.id ? (
+          <Tabs
+            defaultActiveKey="1"
+            className="profile-tabs"
+            items={tabItems}
+            animated={{ inkBar: true, tabPane: true }}
+          />
+        ) : (
+          <div className="loading-container">
+            <Spin tip={text.loadingUser} />
+          </div>
+        )}
+      </section>
     </div>
-  </div>
-);
+  );
 };
 
 export default Profile;

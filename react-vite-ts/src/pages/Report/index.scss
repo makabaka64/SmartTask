@@ -1,123 +1,277 @@
-.report-container {
-  margin: 0 auto;
-  padding: 1rem 2rem;
-  .empty{
-    width: 100%;
+.report-page {
+  display: grid;
+  gap: 18px;
+  padding: 6px;
+}
+
+.report-hero,
+.stat-card,
+.report-panel,
+.message-card {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(20px);
+}
+
+.report-hero {
+  padding: clamp(22px, 3vw, 32px);
+  border-radius: 30px;
+  animation: report-rise 620ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-copy {
+  max-width: 760px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(26, 115, 232, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+  color: #4162a6;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-title {
+  margin: 18px 0 0;
+  color: #101828;
+  font-family: 'Segoe UI Variable Display', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: clamp(2rem, 3.2vw, 3.3rem);
+  font-weight: 650;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.hero-description {
+  max-width: 48rem;
+  margin: 18px 0 0;
+  color: #667085;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.report-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  display: grid;
+  gap: 10px;
+  padding: 20px 22px;
+  border-radius: 24px;
+  opacity: 0;
+  animation: report-rise 540ms ease-out forwards;
+}
+
+.stat-label {
+  color: #667085;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.stat-value {
+  color: #101828;
+  font-size: clamp(1.8rem, 2vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.report-panel {
+  padding: 10px 14px 14px;
+  border-radius: 28px;
+}
+
+.report-tabs {
+  .ant-tabs-nav {
+    margin-bottom: 18px;
   }
-  .report-tabs{
-    width: 100%;
-  .report-card {
-      width: 100%;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 16px;
-      margin-bottom: 1rem;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(8px);
-      transition: transform 0.3s ease;
+
+  .ant-tabs-tab {
+    border-radius: 999px;
+    padding: 10px 14px;
+    color: #5f6b7a;
+    transition: background 180ms ease, color 180ms ease;
 
     &:hover {
-      transform: translateY(-5px);
-    }
-
-    .card-content {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      
-
-      // 左侧区域：头像 + 消息
-      .left-section {
-        display: flex;
-        align-items: center;
-        gap: 12px; 
-        flex: 1; 
-
-        
-        .ant-avatar {
-          width: 40px;
-          height: 40px;
-          font-size: 18px;
-        }
-
-        // 消息内容
-        .message-content {
-          min-width: 0; 
-
-          .message-text {
-            font-size: 14px;
-            color: rgba(0, 0, 0, 0.85);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 500px; 
-          }
-
-          .message-time {
-            font-size: 12px;
-            color: rgba(0, 0, 0, 0.45);
-            margin-top: 4px;
-          }
-        }
-      }
-
-      // 右侧按钮区域
-      .right-section {
-        display: flex;
-        align-items: center;
-        padding-left:1rem; 
-
-        // 按钮样式微调
-        .ant-btn {
-          &.ant-btn-primary {
-            background-color: #1890ff;
-
-            &:hover {
-              background-color: #096dd9;
-            }
-          }
-
-          &[disabled] {
-            background-color: #f5f5f5;
-            color: #bfbfbf;
-          }
-        }
-      }
+      color: #1a73e8;
     }
   }
+
+  .ant-tabs-tab-active {
+    background: rgba(26, 115, 232, 0.08);
+  }
+
+  .ant-tabs-tab-btn {
+    font-weight: 600;
+  }
+
+  .ant-tabs-ink-bar {
+    background: linear-gradient(135deg, #1a73e8 0%, #4f8df8 100%);
+    height: 3px !important;
+    border-radius: 999px;
+  }
 }
+
 .card-list-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem; 
-    width: 100%;
+  display: grid;
+  gap: 14px;
+}
+
+.message-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 24px;
+  opacity: 0;
+  animation: report-rise 540ms ease-out forwards;
+}
+
+.message-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.message-avatar {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #1a73e8, #4f8df8);
+}
+
+.notice-avatar {
+  background: linear-gradient(135deg, #5b7cf0, #7fa5ff);
+}
+
+.message-copy {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.message-tag {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(26, 115, 232, 0.08);
+  color: #275fc7;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.message-text {
+  color: #101828;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.65;
+}
+
+.message-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #667085;
+  font-size: 0.84rem;
+}
+
+.message-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  .ant-btn {
+    min-width: 108px;
+    border-radius: 14px;
+    font-weight: 600;
+  }
+
+  .ant-btn-primary {
+    border: none;
+    background: linear-gradient(135deg, #1a73e8 0%, #4f8df8 100%);
+    box-shadow: 0 16px 28px rgba(26, 115, 232, 0.18);
   }
 }
 
-// 响应式适配：小屏幕下调整布局
-@media screen and (max-width: 768px) {
-  .report-container {
-    padding: 0.5rem;
+.empty {
+  margin: 4rem 0;
+}
 
-    .report-card {
-      .card-content {
-        flex-direction: column; 
-        align-items: flex-start; 
+@media (max-width: 1100px) {
+  .report-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 
-        .left-section {
-          width: 100%; 
+@media (max-width: 768px) {
+  .report-page {
+    gap: 14px;
+    padding: 2px;
+  }
 
-          .message-content .message-text {
-            max-width: 100%; 
-          }
-        }
+  .report-hero,
+  .report-panel,
+  .message-card,
+  .stat-card {
+    border-radius: 22px;
+  }
 
-        .right-section {
-          padding-left: 0;
-          padding-top: 0.5rem;
-          align-self: flex-end; 
-        }
-      }
+  .report-hero,
+  .message-card {
+    padding: 18px;
+  }
+
+  .message-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .message-actions {
+    width: 100%;
+
+    .ant-btn {
+      width: 100%;
     }
+  }
+}
+
+@media (max-width: 640px) {
+  .report-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .hero-title {
+    font-size: 1.72rem;
+  }
+
+  .hero-description,
+  .message-text {
+    font-size: 0.94rem;
+  }
+}
+
+@keyframes report-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

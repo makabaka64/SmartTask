@@ -1,8 +1,8 @@
-import  { useState,useEffect } from "react";
-import { Button,Tag ,Dropdown} from 'antd';
-import type { MenuProps } from 'antd'
-import {  SendOutlined ,DeleteOutlined} from '@ant-design/icons'
-import { inviteMember, getTaskMembers, removeMember} from '@/apis/task';
+import { useState, useEffect } from 'react';
+import { Button, Tag, Dropdown, Avatar } from 'antd';
+import type { MenuProps } from 'antd';
+import { SendOutlined, DeleteOutlined, UserAddOutlined, UserOutlined } from '@ant-design/icons';
+import { inviteMember, getTaskMembers, removeMember } from '@/apis/task';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
 
@@ -10,109 +10,124 @@ interface Props {
   taskId: number;
   canManage: boolean;
 }
-const Member = ({ taskId, canManage}: Props) => {
-  
-  const [ email, setEmail ] = useState('')
+
+const text = {
+  inviteMember: '\u6dfb\u52a0\u6210\u5458',
+  emailPlaceholder: '\u8bf7\u8f93\u5165\u7528\u6237\u90ae\u7bb1',
+  sendInvite: '\u53d1\u9001\u9080\u8bf7',
+  admin: '\u521b\u5efa\u8005',
+  manager: '\u7ba1\u7406\u5458',
+  member: '\u6210\u5458',
+  emailRequired: '\u8bf7\u8f93\u5165\u90ae\u7bb1\u3002',
+  emailInvalid: '\u8bf7\u8f93\u5165\u6709\u6548\u7684\u90ae\u7bb1\u5730\u5740\u3002',
+  memberExists: '\u8be5\u6210\u5458\u5df2\u5b58\u5728\u3002',
+  inviteSent: '\u5df2\u53d1\u9001\u9080\u8bf7\u3002',
+  removeSelf: '\u4e0d\u80fd\u5220\u9664\u81ea\u5df1\u3002',
+  removeSuccess: '\u5220\u9664\u6210\u529f\u3002',
+  remove: '\u5220\u9664'
+};
+
+const Member = ({ taskId, canManage }: Props) => {
+  const [email, setEmail] = useState('');
   const [memList, setMemList] = useState<any[]>([]);
   const currentUserId = useSelector((state: RootState) => state.user.userInfo?.id);
-  // const [role, setRole] = useState<'Participant' | 'user'>('user'); 
-  // 邀请菜单
-  const statusMenu: MenuProps['items'] = [
-    { 
-      key: '0', 
-      label: '管理员', 
-      onClick: () => handleInvite('Participant')
-    },
-    { 
-      key: '1', 
-      label: '成员', 
-      onClick: () => handleInvite('user')
-    },
-  ];  
-  // 拉取成员列表
-    const fetchMembers = async () => {
-      try {
-        const res = await getTaskMembers(taskId);
-        if (res.status === 0) {
-          setMemList(res.data);
-        }
-        
-      } catch (err) {
-        console.error('获取成员失败', err);
+
+  const fetchMembers = async () => {
+    try {
+      const res = await getTaskMembers(taskId);
+      if (res.status === 0) {
+        setMemList(res.data);
       }
-    };
-  
-    // 初次加载
-    useEffect(() => {
-      fetchMembers();
-    }, [taskId]);
-   // 邀请成员
-  const handleInvite = async (role:string) => {
-    if(!email) {
-      alert('请输入邮箱')
-      return
+    } catch (err) {
+      console.error(err);
     }
-    
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
-      alert('请输入有效的邮箱地址');
+  };
+
+  useEffect(() => {
+    fetchMembers();
+  }, [taskId]);
+
+  const handleInvite = async (role: string) => {
+    if (!email) {
+      alert(text.emailRequired);
       return;
     }
-  
-    const existingMember = memList.find(member => member.email === email);
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      alert(text.emailInvalid);
+      return;
+    }
+
+    const existingMember = memList.find((member) => member.email === email);
     if (existingMember) {
-      alert('该成员已存在');
+      alert(text.memberExists);
       setEmail('');
       return;
     }
-   
-    try {
 
-      await inviteMember(taskId, email, role)
-      alert('已发送邀请')
-      setEmail(''); 
-      fetchMembers(); 
-     
-    }catch(err) {
-      console.log(err);
-    }
-  }
-
-  // 删除成员
-  const handleRemove = async (userId: number) => {
-    if (userId === currentUserId) return alert('不能删除自己');
     try {
-      await removeMember(taskId, userId);
-      alert('删除成功');
+      await inviteMember(taskId, email, role);
+      alert(text.inviteSent);
+      setEmail('');
       fetchMembers();
     } catch (err) {
-      console.error('删除失败', err);
+      console.error(err);
     }
   };
- 
+
+  const handleRemove = async (userId: number) => {
+    if (userId === currentUserId) {
+      return alert(text.removeSelf);
+    }
+    try {
+      await removeMember(taskId, userId);
+      alert(text.removeSuccess);
+      fetchMembers();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const statusMenu: MenuProps['items'] = [
+    {
+      key: '0',
+      label: text.manager,
+      onClick: () => handleInvite('Participant')
+    },
+    {
+      key: '1',
+      label: text.member,
+      onClick: () => handleInvite('user')
+    }
+  ];
 
   return (
     <div className="member-manage">
-      <div className="members">
-        <div className="addMem">
-          <div className="func-add">
-            <div className="label">添加成员：</div>
-            <div className="email-input">
-            <input
-                type="email"
-                placeholder="请输入用户邮箱"
-                value={email}
-                disabled={!canManage}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-         <Dropdown menu={{ items: statusMenu }} disabled={!canManage}  placement="bottomLeft">
-            <div className="send-btn">
-              <button className="invite-btn" disabled >发送邀请 <SendOutlined /></button>
-            </div>
-             </Dropdown>
-          </div>
+      <div className="member-invite">
+        <div className="invite-title">
+          <UserAddOutlined />
+          <span>{text.inviteMember}</span>
         </div>
+
+        <div className="invite-form">
+          <input
+            type="email"
+            placeholder={text.emailPlaceholder}
+            value={email}
+            disabled={!canManage}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Dropdown menu={{ items: statusMenu }} disabled={!canManage} placement="bottomLeft">
+            <button className="invite-btn" disabled={!canManage}>
+              {text.sendInvite}
+              <SendOutlined />
+            </button>
+          </Dropdown>
+        </div>
+      </div>
+
+      <div className="members">
         {memList.map((item: any) => {
           const isCreator = item.role === 'admin';
           const isPart = item.role === 'Participant';
@@ -120,41 +135,46 @@ const Member = ({ taskId, canManage}: Props) => {
           const canDelete = canManage && item.id !== currentUserId && !isCreator;
 
           let roleLabel = '';
-          let tagColor : 'red' | 'orange' | 'blue' = 'blue';
+          let tagColor: 'red' | 'orange' | 'blue' = 'blue';
 
           if (isCreator) {
-            roleLabel = '创建者';
+            roleLabel = text.admin;
             tagColor = 'red';
           } else if (isPart) {
-            roleLabel = '管理员';
+            roleLabel = text.manager;
             tagColor = 'orange';
           } else if (isUser) {
-            roleLabel = '成员';
+            roleLabel = text.member;
           }
 
           return (
             <div className="member-item" key={item.id}>
-              <div className="avatar">
-                <img
-                  src={item.avater_url}
-                  alt={item.nickname}
-                  style={{ width: 30, height: 30, borderRadius: '50%' }}
-                />
-              </div>
-              <div className="nickname">
-                {item.nickname} 
-                <Tag color={tagColor} style={{ marginLeft: 8 }}>
-            {roleLabel}
-          </Tag>
-              </div>
-              <div className="email">{item.email}</div>
-              
-                <div className="add-link">
-                  <Button danger disabled={!canDelete} icon={<DeleteOutlined />} size="small" onClick={() => handleRemove(item.id)}>
-                    删除
-                  </Button>
+              <div className="member-main">
+                {item.avater_url ? (
+                  <Avatar src={item.avater_url} />
+                ) : (
+                  <Avatar icon={<UserOutlined />} />
+                )}
+                <div className="member-copy">
+                  <div className="nickname">
+                    {item.nickname}
+                    <Tag color={tagColor}>{roleLabel}</Tag>
+                  </div>
+                  <div className="email">{item.email}</div>
                 </div>
-              
+              </div>
+
+              <div className="member-action">
+                <Button
+                  danger
+                  disabled={!canDelete}
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  onClick={() => handleRemove(item.id)}
+                >
+                  {text.remove}
+                </Button>
+              </div>
             </div>
           );
         })}
@@ -163,4 +183,4 @@ const Member = ({ taskId, canManage}: Props) => {
   );
 };
 
-export default Member
+export default Member;
