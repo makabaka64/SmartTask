@@ -52,13 +52,13 @@ const Member = ({ taskId, canManage}: Props) => {
       alert('请输入邮箱')
       return
     }
-    // 简单的邮箱格式验证
+    
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(email)) {
       alert('请输入有效的邮箱地址');
       return;
     }
-   // 检查是否已存在
+  
     const existingMember = memList.find(member => member.email === email);
     if (existingMember) {
       alert('该成员已存在');
@@ -71,7 +71,7 @@ const Member = ({ taskId, canManage}: Props) => {
       await inviteMember(taskId, email, role)
       alert('已发送邀请')
       setEmail(''); 
-      fetchMembers(); // 刷新成员列表
+      fetchMembers(); 
      
     }catch(err) {
       console.log(err);

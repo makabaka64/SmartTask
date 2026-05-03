@@ -24,17 +24,18 @@ import { getTaskDetail,editTask } from '@/apis/task';
 
 
 const TaskDetail = () => {
+  
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [task, setTask] = useState<TaskDetailType | null>(null);
   const [status, setStatus] = useState<{ icon: React.ReactNode; name: string }>({  icon: <ClockCircleOutlined />, name: '未完成' });
   const [loading, setLoading] = useState<boolean>(true);
   const [isStatusUpdating, setIsStatusUpdating] = useState<boolean>(false); // 状态更新中
- // 权限标识
- const canView = usePermission(task, 'view_task');
- const canEdit = usePermission(task, 'edit_task');
- const canManageMembers = usePermission(task, 'member_manage');
- const canDelete = usePermission(task, 'delete_task');
+  // 权限标识
+  const canView = usePermission(task, 'view_task');
+  const canEdit = usePermission(task, 'edit_task');
+  const canManageMembers = usePermission(task, 'member_manage');
+  const canDelete = usePermission(task, 'delete_task');
 
  const userInfo = useSelector((state: RootState) => state.user.userInfo)
 
@@ -138,7 +139,7 @@ const TaskDetail = () => {
       {task?.name}
       </div>
       <div className="status-area">
-        <WithPermission task={task} required="view_task">
+        <WithPermission task={task} required="delete_task">
           <Dropdown menu={{ items: statusMenu }} placement="bottomLeft">
             <div className="status area-item">
                {isStatusUpdating ? (

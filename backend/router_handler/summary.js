@@ -20,6 +20,7 @@ exports.handleStreamSummary = async (req, res) => {
   });
 
   const taskId = req.params.taskId;
+  const lastEventId = req.query.lastEventId || null; // 前端传入断点位置
 
   try {
     const [rows] = await db.query('SELECT * FROM task WHERE id = ?', [taskId]);
@@ -29,7 +30,9 @@ exports.handleStreamSummary = async (req, res) => {
     }
 
     const task = rows[0];
-    await streamSummary(task.description, res);
+    const previous = '';
+    // 传递断点
+    await streamSummary(task.description, res, { lastEventId , previous });
   } catch (err) {
     console.error('AI摘要失败：', err);
     res.write(`event: error\ndata: {"message": "AI摘要失败"}\n\n`);

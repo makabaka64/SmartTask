@@ -3,7 +3,7 @@ const config = require('./config')
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const fetch = require('node-fetch'); 
 const proxyAgent = new HttpsProxyAgent('http://127.0.0.1:7890'); // 使用我的代理服务器地址和端口
-// 初始化 OpenAI 客户端（传入自定义 fetch）
+// 初始化 OpenAI 客户端
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
   baseURL: 'https://openai.api2d.net',
@@ -13,7 +13,7 @@ const openai = new OpenAI({
   }),
 });
 
-async function streamSummary(text, res) {
+async function streamSummary(text, res, { lastEventId = null , previous = ''}) {
     try{
 const stream = await openai.chat.completions.create({
   model: "gpt-3.5-turbo",
@@ -24,20 +24,26 @@ const stream = await openai.chat.completions.create({
   ],
       stream: true
 });
+    // 设置响应头
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    let fullContent = '';
-
+    let fullContent = previous;
+    let eventId = Number(lastEventId) || 0; // 断点续传的事件ID起点
+   // 循环接收ai返回的流式数据
     for await (const chunk of stream) {
       const delta = chunk.choices?.[0]?.delta?.content;
       if (delta) {
+        eventId ++;
         fullContent += delta;
+
+         // 每个片段都带唯一ID
+        res.write(`id: ${eventId}\n`);
         res.write(`data: ${delta}\n\n`);
       }
     }
-
+    // 完成
     res.write(`event: done\ndata: [DONE]\n\n`);
     res.end();
   } catch (err) {

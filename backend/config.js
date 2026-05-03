@@ -4,7 +4,7 @@ module.exports = {
   accessTokenExpiresIn: '1h',
 
   // Refresh Token 配置
-  refreshTokenExpiresInMs: 7 * 24 * 60 * 60 * 1000, // 7 天（以 ms 为单位）
+  refreshTokenExpiresInMs: 7 * 24 * 60 * 60 * 1000, // 7 天
   refreshTokenCookieOptions: {
     httpOnly: true,
     secure: false,

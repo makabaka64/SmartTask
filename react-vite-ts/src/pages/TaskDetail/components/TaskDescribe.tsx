@@ -39,25 +39,54 @@ const TaskDescribe = ({ task, canEdit }: Props) => {
 
     settempSummary('');
     setLoading(true);
-    // 清除之前的摘要
-   dispatch(clearTaskSummary(task.id));
-    streamSummary(
+    dispatch(clearTaskSummary(task.id));
+
+    const bufferRef: string[] = [];
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let closeStream = null;
+
+    closeStream =  streamSummary(
       task.id,
-      // 拼接
+      // 当收到 chunk 时，先放进 buffer
       (chunk) => {
-      settempSummary(prev => {
-      const newSummary = prev + chunk;
-      dispatch(setTaskSummary({ taskId: task.id, summary: chunk }));
-      return newSummary;
-    });
-      },
-      () => setLoading(false),
-      () => {
-        setLoading(false);
-        alert('生成失败');
+        bufferRef.push(chunk);
+        if (!timer) {
+          timer = setTimeout(() => {
+            if (bufferRef.length > 0) {
+              const merged = bufferRef.join('');
+              settempSummary((prev)=>prev + merged);
+              dispatch(setTaskSummary({ taskId: task.id, summary: merged }))
+              bufferRef.length = 0; 
+              ;
+            }
+          }, 100);
+        }
+        },
+ // 完成时
+    () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
       }
-    );
+      setLoading(false);
+    },
+    // 出错时
+    () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      setLoading(false);
+      alert('生成失败');
+    }
+  );
+  return () => {
+    if (closeStream) closeStream(); 
+    if (timer) clearInterval(timer);
   };
+};
+    
+   
 
   return (
     <div className="task-describe">
