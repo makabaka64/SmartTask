@@ -53,6 +53,7 @@ const text = {
   creating: '\u65b0\u5efa',
   inProgress: '\u8fdb\u884c\u4e2d',
   upcoming: '\u5f85\u5f00\u59cb',
+  overdue: '\u5df2\u903e\u671f',
   completed: '\u5df2\u5b8c\u6210',
   allTasks: '\u5168\u90e8\u4efb\u52a1',
   dragTip: '\u652f\u6301\u62d6\u62fd\u6392\u5e8f',
@@ -70,15 +71,29 @@ const text = {
   descriptionPlaceholder: '\u63cf\u8ff0\u4efb\u52a1\u80cc\u666f\u3001\u8fdb\u5ea6\u6216\u76ee\u6807'
 };
 
+const getTimeValue = (value?: string) => {
+  const time = dayjs(value);
+  return time.isValid() ? time.valueOf() : 0;
+};
+
+const sortByTime = (list: TaskDetail[], field: 'created_at' | 'created_end', order: 'asc' | 'desc' = 'asc') =>
+  [...list].sort((a, b) => {
+    const left = getTimeValue(a[field]);
+    const right = getTimeValue(b[field]);
+    return order === 'asc' ? left - right : right - left;
+  });
+
 const Dashboard = () => {
   const [proceed, setProceed] = useState(false);
   const [waiting, setWaiting] = useState(false);
+  const [overdue, setOverdue] = useState(false);
   const [finish, setFinish] = useState(false);
   const [targetIndex, setTargetIndex] = useState<any>(-1);
   const [open, setOpen] = useState(false);
   const dispatch: AppDispatch = useDispatch();
   const [proList, setProList] = useState<TaskDetail[]>([]);
   const [waitList, setWaitList] = useState<TaskDetail[]>([]);
+  const [overdueList, setOverdueList] = useState<TaskDetail[]>([]);
   const [finishList, setFinishList] = useState<TaskDetail[]>([]);
   const [form] = Form.useForm();
   const userInfo = useSelector((state: RootState) => state.user.userInfo);
@@ -91,25 +106,36 @@ const Dashboard = () => {
   useEffect(() => {
     if (taskInfo && Array.isArray(taskInfo)) {
       const now = dayjs();
+      const pendingTasks = taskInfo.filter((task) => task.status !== 1);
 
-      const proceedTasks = taskInfo.filter((task) => {
-        const start = dayjs(task.created_at);
-        const end = dayjs(task.created_end);
-        return now.isAfter(start) && now.isBefore(end);
-      });
+      const finishTasks = sortByTime(
+        taskInfo.filter((task) => task.status === 1),
+        'created_end',
+        'desc'
+      );
 
-      const waitTasks = taskInfo.filter((task) => {
-        const start = dayjs(task.created_at);
-        return now.isBefore(start);
-      });
+      const overdueTasks = sortByTime(
+        pendingTasks.filter((task) => now.isAfter(dayjs(task.created_end))),
+        'created_end'
+      );
 
-      const finishTasks = taskInfo.filter((task) => {
-        const end = dayjs(task.created_end);
-        return now.isAfter(end);
-      });
+      const waitTasks = sortByTime(
+        pendingTasks.filter((task) => now.isBefore(dayjs(task.created_at))),
+        'created_at'
+      );
+
+      const proceedTasks = sortByTime(
+        pendingTasks.filter((task) => {
+          const start = dayjs(task.created_at);
+          const end = dayjs(task.created_end);
+          return !now.isBefore(start) && !now.isAfter(end);
+        }),
+        'created_end'
+      );
 
       setProList(proceedTasks);
       setWaitList(waitTasks);
+      setOverdueList(overdueTasks);
       setFinishList(finishTasks);
     }
   }, [taskInfo]);
@@ -159,6 +185,15 @@ const Dashboard = () => {
 
   const taskSections = [
     {
+      key: 'overdue',
+      title: text.overdue,
+      tone: 'finish',
+      collapsed: overdue,
+      onToggle: () => setOverdue(!overdue),
+      list: overdueList,
+      setList: setOverdueList
+    },
+    {
       key: 'proceed',
       title: text.inProgress,
       tone: 'proceed',
@@ -177,7 +212,7 @@ const Dashboard = () => {
       setList: setWaitList
     },
     {
-      key: 'finish',
+      key: 'completed',
       title: text.completed,
       tone: 'finish',
       collapsed: finish,
