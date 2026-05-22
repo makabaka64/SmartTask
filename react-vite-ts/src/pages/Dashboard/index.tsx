@@ -114,13 +114,6 @@ const Dashboard = () => {
     }
   }, [taskInfo]);
 
-  const stats = [
-    { label: text.allTasks, value: taskInfo?.length || 0 },
-    { label: text.inProgress, value: proList.length },
-    { label: text.upcoming, value: waitList.length },
-    { label: text.completed, value: finishList.length }
-  ];
-
   const handleCreateTask = async (values: any) => {
     try {
       await createTask({
@@ -212,15 +205,6 @@ const Dashboard = () => {
             </button>
             <span className="drag-tip">{text.dragTip}</span>
           </div>
-        </section>
-
-        <section className="dashboard-stats">
-          {stats.map((item, index) => (
-            <div className="stat-card" key={item.label} style={{ animationDelay: `${index * 80}ms` }}>
-              <span className="stat-label">{item.label}</span>
-              <strong className="stat-value">{item.value}</strong>
-            </div>
-          ))}
         </section>
 
         <section className="task-board">

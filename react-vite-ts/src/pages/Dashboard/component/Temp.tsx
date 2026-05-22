@@ -10,7 +10,7 @@ const text = {
   undone: '\u672a\u5b8c\u6210'
 };
 
-const Temp = (props: any) => {
+export const Temp = (props: any) => {
   const { item, index, moveItem, onChangeIndex, List, setList } = props;
   const tempRef = useRef(null);
   const navigate = useNavigate();
@@ -61,5 +61,3 @@ const Temp = (props: any) => {
     </div>
   );
 };
-
-export default Temp;

@@ -98,6 +98,7 @@
 .hero-title {
   margin: 0;
   max-width: 8.5em;
+  white-space: nowrap;
   font-family: 'Segoe UI Variable Display', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-size: clamp(2.4rem, 4.6vw, 4.4rem);
   font-weight: 650;
@@ -292,6 +293,7 @@
 
   .hero-title {
     max-width: none;
+    white-space: normal;
   }
 
   .hero-highlights {

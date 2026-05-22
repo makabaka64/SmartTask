@@ -1,4 +1,4 @@
-import Temp from "./Temp";
+import { Temp } from './Temp';
 import { useDrop } from "react-dnd";
 import { useCallback } from "react";
 

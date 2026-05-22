@@ -13,17 +13,15 @@ interface LoginForm {
 }
 
 const loginHighlights = [
-  '\u7edf\u4e00\u6536\u62e2\u4efb\u52a1\u3001\u6210\u5458\u4e0e\u63d0\u9192',
-  '\u4ee5\u66f4\u5c11\u6b65\u9aa4\u5b8c\u6210\u534f\u4f5c\u5206\u53d1',
-  '\u5728\u4e00\u4e2a\u754c\u9762\u91cc\u8ddf\u8e2a\u8fdb\u5ea6\u53d8\u5316'
+  'AI 摘要帮助你快速提炼任务关键信息',
+  '\u57fa\u4e8e RBAC \u7684\u89d2\u8272\u6743\u9650\u63a7\u5236\u56e2\u961f\u53ef\u89c1\u8303\u56f4',
+  '\u53ef\u89c6\u5316\u8fdb\u5ea6\u4e0e\u622a\u6b62\u63d0\u9192\u5e2e\u52a9\u53ca\u65f6\u8ddf\u8fdb'
 ];
 
 const text = {
-  appName: '\u667a\u80fd\u4efb\u52a1\u7ba1\u7406\u5e73\u53f0',
-  heroTitleLine1: '\u66f4\u8f7b\u5730\u5f00\u59cb',
-  heroTitleLine2: '\u4efb\u52a1\u534f\u4f5c',
+  heroTitle: '\u667a\u534f\u4e91',
   heroDescription:
-    '\u7528\u66f4\u8f7b\u7684\u65b9\u5f0f\u767b\u5f55\u3001\u6ce8\u518c\u548c\u5f00\u59cb\u534f\u4f5c\u3002\u754c\u9762\u4fdd\u6301\u514b\u5236\uff0c\u91cd\u70b9\u53ea\u653e\u5728\u8fdb\u5165\u7cfb\u7edf\u524d\u771f\u6b63\u9700\u8981\u770b\u5230\u7684\u4fe1\u606f\u3002',
+    '\u767b\u5f55\u540e\u5373\u53ef\u67e5\u770b\u5f53\u524d\u4efb\u52a1\u3001\u89d2\u8272\u6743\u9650\u4e0e\u5173\u952e\u63d0\u9192\u3002',
   sent: '\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\u3002',
   invalidEmail: '\u8bf7\u5148\u8f93\u5165\u6709\u6548\u7684\u90ae\u7bb1\u5730\u5740\u3002',
   loginSuccess: '\u767b\u5f55\u6210\u529f\u3002',
@@ -98,13 +96,7 @@ const Login: React.FC = () => {
         <div className="login-backdrop login-backdrop-right" />
 
         <section className="login-hero">
-          <span className="hero-badge">Google Labs inspired</span>
-          <p className="hero-kicker">{text.appName}</p>
-          <h1 className="hero-title">
-            {text.heroTitleLine1}
-            <br />
-            {text.heroTitleLine2}
-          </h1>
+          <h1 className="hero-title">{text.heroTitle}</h1>
           <p className="hero-description">{text.heroDescription}</p>
 
           <div className="hero-highlights">

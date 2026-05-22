@@ -5,7 +5,6 @@
 }
 
 .profile-hero,
-.stat-card,
 .profile-panel,
 .profile-card {
   border: 1px solid rgba(255, 255, 255, 0.68);
@@ -74,34 +73,6 @@
   background: rgba(255, 255, 255, 0.78);
   color: #16304f;
   font-weight: 600;
-}
-
-.profile-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.stat-card {
-  display: grid;
-  gap: 10px;
-  padding: 20px 22px;
-  border-radius: 24px;
-  opacity: 0;
-  animation: profile-rise 540ms ease-out forwards;
-}
-
-.stat-label {
-  color: #667085;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.stat-value {
-  color: #101828;
-  font-size: clamp(1.8rem, 2vw, 2.5rem);
-  font-weight: 700;
-  letter-spacing: -0.04em;
 }
 
 .profile-panel {
@@ -229,10 +200,6 @@
 }
 
 @media (max-width: 1100px) {
-  .profile-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .profile-hero {
     align-items: flex-start;
     flex-direction: column;
@@ -247,14 +214,8 @@
 
   .profile-hero,
   .profile-panel,
-  .profile-card,
-  .stat-card {
+  .profile-card {
     border-radius: 22px;
-  }
-
-  .profile-stats {
-    grid-template-columns: 1fr;
-    gap: 12px;
   }
 
   .profile-hero,

@@ -13,10 +13,8 @@ const text = {
   title: '\u63d0\u9192\u3001\u9080\u8bf7\u4e0e\u56de\u5e94\u4e00\u5c4f\u67e5\u770b',
   description:
     '\u5728\u8fd9\u91cc\u5feb\u901f\u67e5\u770b\u7cfb\u7edf\u63d0\u9192\u548c\u534f\u4f5c\u9080\u8bf7\uff0c\u5e76\u76f4\u63a5\u5b8c\u6210\u63a5\u53d7\u6216\u8ddf\u8fdb\u5904\u7406\u3002',
-  all: '\u5168\u90e8\u6d88\u606f',
   reminders: '\u7cfb\u7edf\u901a\u77e5',
   invites: '\u534f\u4f5c\u9080\u8bf7',
-  pending: '\u5f85\u5904\u7406',
   noReminders: '\u6682\u65e0\u7cfb\u7edf\u901a\u77e5',
   noInvites: '\u6682\u65e0\u534f\u4f5c\u9080\u8bf7',
   systemNotice: '\u7cfb\u7edf\u901a\u77e5',
@@ -40,11 +38,6 @@ const Report = () => {
     () => notifications.filter((notification: Notification) => notification.type === 'invite'),
     [notifications]
   );
-  const pendingInvites = useMemo(
-    () => invites.filter((notification) => notification.status === 'pending'),
-    [invites]
-  );
-
   useEffect(() => {
     const getList = async () => {
       const res = await fetchNotifications();
@@ -74,13 +67,6 @@ const Report = () => {
       alert(text.acceptRetry);
     }
   };
-
-  const stats = [
-    { label: text.all, value: notifications.length },
-    { label: text.reminders, value: reminders.length },
-    { label: text.invites, value: invites.length },
-    { label: text.pending, value: pendingInvites.length }
-  ];
 
   const renderEmpty = (description: string) => (
     <Empty className="empty" description={description} />
@@ -178,15 +164,6 @@ const Report = () => {
           <h2 className="hero-title">{text.title}</h2>
           <p className="hero-description">{text.description}</p>
         </div>
-      </section>
-
-      <section className="report-stats">
-        {stats.map((item, index) => (
-          <div className="stat-card" key={item.label} style={{ animationDelay: `${index * 80}ms` }}>
-            <span className="stat-label">{item.label}</span>
-            <strong className="stat-value">{item.value}</strong>
-          </div>
-        ))}
       </section>
 
       <section className="report-panel">

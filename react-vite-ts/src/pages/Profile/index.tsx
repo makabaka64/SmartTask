@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Avatar, Input, Button, Form, Tabs, message, Upload, Spin } from 'antd';
 import { UserOutlined, LockOutlined, UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
@@ -69,16 +69,6 @@ const Profile: React.FC = () => {
       });
     }
   }, [userInfo, form]);
-
-  const stats = useMemo(
-    () => [
-      { label: text.profileCount, value: userInfo?.nickname ? 1 : 0 },
-      { label: text.safetyCount, value: 1 },
-      { label: text.email, value: userInfo?.email ? 1 : 0 },
-      { label: text.joinedAt, value: userInfo?.create_time ? 1 : 0 }
-    ],
-    [userInfo]
-  );
 
   const handleUpdateProfile = async (values: any) => {
     try {
@@ -285,15 +275,6 @@ const Profile: React.FC = () => {
         </div>
 
      
-      </section>
-
-      <section className="profile-stats">
-        {stats.map((item, index) => (
-          <div className="stat-card" key={item.label} style={{ animationDelay: `${index * 80}ms` }}>
-            <span className="stat-label">{item.label}</span>
-            <strong className="stat-value">{item.value}</strong>
-          </div>
-        ))}
       </section>
 
       <section className="profile-panel">
