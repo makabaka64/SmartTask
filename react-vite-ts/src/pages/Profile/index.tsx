@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Avatar, Input, Button, Form, Tabs, message, Upload, Spin } from 'antd';
-import { UserOutlined, LockOutlined, UploadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -13,7 +13,7 @@ import './index.scss';
 
 const text = {
   badge: '\u4e2a\u4eba\u4e2d\u5fc3',
-  title: '\u7ef4\u62a4\u4f60\u7684\u8d26\u53f7\u4fe1\u606f\u4e0e\u5b89\u5168\u8bbe\u7f6e',
+  title: '\u8d26\u53f7\u4fe1\u606f\u4e0e\u5b89\u5168',
   description:
     '\u5728\u8fd9\u91cc\u4fee\u6539\u6635\u79f0\u3001\u66f4\u65b0\u5934\u50cf\u3001\u7ba1\u7406\u5bc6\u7801\uff0c\u8ba9\u4e2a\u4eba\u8d26\u53f7\u72b6\u6001\u4fdd\u6301\u6e05\u6670\u548c\u53ef\u4fe1\u3002',
   profile: '\u4e2a\u4eba\u4fe1\u606f',
