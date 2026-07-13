@@ -1,0 +1,149 @@
+.agent-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  .agent-hero,
+  .agent-panel {
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(20px);
+  }
+
+  .agent-hero {
+    padding: 28px 30px;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(26, 115, 232, 0.08);
+    color: #1a73e8;
+    font-weight: 700;
+  }
+
+  .hero-title {
+    margin: 14px 0 10px;
+    font-size: 2rem;
+    color: #101828;
+  }
+
+  .hero-description {
+    margin: 0;
+    max-width: 760px;
+    color: #667085;
+    line-height: 1.7;
+  }
+
+  .agent-workbench {
+    display: grid;
+    grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .agent-panel.ant-card .ant-card-body {
+    padding: 20px;
+  }
+
+  .panel-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .message-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 520px;
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+    border: 1px dashed rgba(15, 23, 42, 0.14);
+    border-radius: 18px;
+    color: #667085;
+  }
+
+  .message-card {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  .message-card.role-user {
+    background: #eef4ff;
+  }
+
+  .message-card.role-tool {
+    background: #fff9eb;
+  }
+
+  .message-card.role-error {
+    background: #fff2f0;
+  }
+
+  .message-role {
+    margin-bottom: 8px;
+    color: #475467;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .message-content {
+    color: #101828;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  .draft-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .draft-card {
+    padding: 14px;
+    border-radius: 16px;
+    background: white;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .draft-head,
+  .draft-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .draft-card p {
+    margin: 10px 0;
+    color: #475467;
+  }
+
+  .draft-meta,
+  .draft-risk {
+    color: #667085;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 960px) {
+  .agent-page {
+    .agent-workbench {
+      grid-template-columns: 1fr;
+    }
+  }
+}

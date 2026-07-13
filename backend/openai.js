@@ -53,4 +53,4 @@ const stream = await openai.chat.completions.create({
   }
 }
 
-module.exports = { streamSummary }
+module.exports = { streamSummary, openai }

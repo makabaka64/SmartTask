@@ -8,6 +8,7 @@ import {
   DashboardOutlined,
   BarChartOutlined,
   MessageOutlined,
+  RobotOutlined,
   UserOutlined,
   LogoutOutlined
 } from '@ant-design/icons';
@@ -24,6 +25,7 @@ const text = {
   logout: '\u9000\u51fa\u767b\u5f55',
   taskBoard: '\u4efb\u52a1\u9762\u677f',
   analytics: '\u5b9e\u65f6\u770b\u677f',
+  agent: 'Agent 工作台',
   messages: '\u6d88\u606f\u4e2d\u5fc3',
   profile: '\u4e2a\u4eba\u4e2d\u5fc3',
   userFallback: 'User'
@@ -64,6 +66,11 @@ const MainLayout: React.FC = () => {
       key: '/barchart',
       icon: <BarChartOutlined />,
       label: text.analytics
+    },
+    {
+      key: '/agent',
+      icon: <RobotOutlined />,
+      label: text.agent
     },
     {
       key: '/report',

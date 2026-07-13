@@ -1,80 +1,79 @@
-const express = require('express')
-const app = express()
-const cors = require('cors')
+const express = require('express');
+const cors = require('cors');
 const joi = require('joi');
-const config = require('./config'); 
-const expressJWT = require('express-jwt')
-const cookieParser = require('cookie-parser')
-const http = require('http')
-const server = http.createServer(app);
+const config = require('./config');
+const expressJWT = require('express-jwt');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
+const app = express();
 
-app.use(cookieParser())  // 注册解析 Cookie 的中间件
-app.use(cors({
-    origin: 'http://localhost:5173', // 前端实际运行地址
-    credentials: true,               // 允许携带 cookie
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['set-cookie'] // 允许客户端读取set-cookie头
-  }))
-app.use(express.json()) 
-app.use(express.urlencoded({ extended: false })) 
+    exposedHeaders: ['set-cookie']
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-// 路由之前，封装 res.cc 函数
 app.use((req, res, next) => {
-    res.cc = function (err, status = 1) {
-        res.send({
-            status,
-            message: err instanceof Error ? err.message : err,
-        })
-    }
-    next()
-})
-app.use(expressJWT({
-    secret: config.jwtSecretKey,
-    algorithms: ['HS256'] 
-  }).unless({
-    path: [/^\/api\//] 
-  }))
-// 导入并注册用户路由模块
-const userRouter = require('./router/user')
-app.use('/api', userRouter)
-// 用户信息
-const userinfoRouter = require('./router/userinfo')
-app.use('/my', userinfoRouter)
-// 任务相关路由
-const taskRouter = require('./router/task');
-app.use('/task', taskRouter);
-// openai 流式摘要
-const summaryRouter = require('./router/summary');
-app.use('/api', summaryRouter);
+  res.cc = function cc(err, status = 1) {
+    res.send({
+      status,
+      message: err instanceof Error ? err.message : err
+    });
+  };
+  next();
+});
 
-// 定义错误级别的中间件
+app.use(
+  expressJWT({
+    secret: config.jwtSecretKey,
+    algorithms: ['HS256']
+  }).unless({
+    path: [/^\/api\//]
+  })
+);
+
+const userRouter = require('./router/user');
+const userinfoRouter = require('./router/userinfo');
+const taskRouter = require('./router/task');
+const summaryRouter = require('./router/summary');
+const agentRouter = require('./router/agent');
+
+app.use('/api', userRouter);
+app.use('/my', userinfoRouter);
+app.use('/task', taskRouter);
+app.use('/api', summaryRouter);
+app.use('/agent', agentRouter);
+
 app.use((err, req, res, next) => {
-    // 如果 res.cc 没挂载，临时挂一个
-    if (typeof res.cc !== 'function') {
-        res.cc = function (err, status = 1) {
-            res.send({
-                status,
-                message: err instanceof Error ? err.message : err
-            });
-        };
-    }
-    // 验证失败导致的错误
-    if (err instanceof joi.ValidationError) return res.cc(err)
-    // 身份认证失败后的错误
-    if (err.name === 'UnauthorizedError') {
-        return res.status(401).send({
-            status: 1,
-            message: '身份认证失败！'
-          })
-    }
-    // 未知的错误
-    return res.cc(err)
-})
-// 启动定时任务提醒
+  if (typeof res.cc !== 'function') {
+    res.cc = function cc(fallbackErr, status = 1) {
+      res.send({
+        status,
+        message: fallbackErr instanceof Error ? fallbackErr.message : fallbackErr
+      });
+    };
+  }
+
+  if (err instanceof joi.ValidationError) return res.cc(err);
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).send({
+      status: 1,
+      message: '身份认证失败'
+    });
+  }
+
+  return res.cc(err);
+});
+
 require('./reminder');
 
-app.listen(3001, function () {
-  console.log('api server running at http://localhost:3001')
-})
+app.listen(3001, () => {
+  console.log('api server running at http://localhost:3001');
+});
