@@ -4,5 +4,6 @@ const agentHandler = require('../router_handler/agent');
 
 router.post('/stream', agentHandler.streamAgent);
 router.post('/confirm-drafts', agentHandler.confirmDrafts);
+router.get('/runs', agentHandler.getRuns);
 
 module.exports = router;

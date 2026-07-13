@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Input, Segmented, Space, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { useDispatch } from 'react-redux';
 import { fetchTaskList } from '@/store/modules/taskSlice';
 import type { AppDispatch } from '@/store';
-import type { AgentMessage, AgentType } from '@/types/agent';
+import type { AgentMessage, AgentRunLog, AgentType } from '@/types/agent';
 import { streamAgentRun } from '@/services/agentStreamService';
-import { confirmAgentDrafts } from '@/apis/agent';
+import { confirmAgentDrafts, getAgentRuns } from '@/apis/agent';
 import './index.scss';
 
 const { TextArea } = Input;
@@ -27,7 +27,7 @@ const text = {
   badge: 'Agent 工作台',
   title: '让任务系统具备可执行的 AI 助手',
   description:
-    '在这里发起任务拆解、进展摘要或周报生成。第一版重点支持结构化草案、流式过程和确认落库闭环。',
+    '在这里发起任务拆解、进展摘要或周报生成。',
   send: '运行 Agent',
   confirm: '确认创建任务',
   confirmed: '已创建',
@@ -36,7 +36,10 @@ const text = {
   streaming: 'Agent 正在执行...',
   idleHint: '先选择一个 Agent 类型，再输入任务目标。',
   confirmSuccess: '任务草案已写入任务系统。',
-  confirmFailed: '创建失败，请稍后重试。'
+  confirmFailed: '创建失败，请稍后重试。',
+  knowledgeTitle: '知识命中',
+  recentRuns: '最近运行',
+  noRuns: '暂无运行记录'
 };
 
 function createMessage(role: AgentMessage['role'], content: string, extra?: Partial<AgentMessage>): AgentMessage {
@@ -48,11 +51,17 @@ function createMessage(role: AgentMessage['role'], content: string, extra?: Part
   };
 }
 
+function getAgentTypeLabel(type: AgentType) {
+  return agentOptions.find((item) => item.value === type)?.label || type;
+}
+
 const AgentPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [agentType, setAgentType] = useState<AgentType>('task_planner');
   const [input, setInput] = useState(presets.task_planner);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [recentRuns, setRecentRuns] = useState<AgentRunLog[]>([]);
+  const [currentRunId, setCurrentRunId] = useState<string>();
   const [isRunning, setIsRunning] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -61,48 +70,85 @@ const AgentPage = () => {
     [messages]
   );
 
+  const latestKnowledgeMessage = useMemo(
+    () => [...messages].reverse().find((item) => item.role === 'system' && item.knowledgeHits?.length),
+    [messages]
+  );
+
+  const loadRuns = async () => {
+    try {
+      const res = await getAgentRuns();
+      if (res.status === 0) {
+        setRecentRuns(res.data);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    loadRuns();
+  }, []);
+
   const appendAssistantChunk = (chunk: string) => {
     setMessages((prev) => {
       const last = prev[prev.length - 1];
       if (last?.role === 'assistant' && last.status === 'pending') {
         return [...prev.slice(0, -1), { ...last, content: last.content + chunk }];
       }
-      return [...prev, createMessage('assistant', chunk, { status: 'pending' })];
+      return [...prev, createMessage('assistant', chunk, { status: 'pending', runId: currentRunId })];
     });
   };
 
   const finalizeAssistantMessage = () => {
-    setMessages((prev) =>
-      prev.map((item, index) =>
-        index === prev.length - 1 && item.role === 'assistant' ? { ...item, status: 'ready' } : item
-      )
-    );
+    setMessages((prev) => {
+      const next = [...prev];
+      const lastIndex = next.map((item) => item.role).lastIndexOf('assistant');
+      if (lastIndex >= 0) {
+        next[lastIndex] = { ...next[lastIndex], status: 'ready' };
+      }
+      return next;
+    });
   };
 
   const handleRun = async () => {
     if (!input.trim() || isRunning) return;
     setIsRunning(true);
+    setCurrentRunId(undefined);
     setMessages((prev) => [...prev, createMessage('user', input)]);
 
     try {
       await streamAgentRun(agentType, input, {
+        run_started: ({ runId }) => {
+          setCurrentRunId(runId);
+          setMessages((prev) => [...prev, createMessage('system', `本次运行 ID：${runId}`, { runId })]);
+        },
         message: ({ chunk }) => appendAssistantChunk(chunk),
         tool_start: ({ message }) =>
-          setMessages((prev) => [...prev, createMessage('tool', `开始执行：${message}`)]),
+          setMessages((prev) => [...prev, createMessage('tool', `开始执行：${message}`, { runId: currentRunId })]),
         tool_result: ({ message }) =>
-          setMessages((prev) => [...prev, createMessage('tool', `执行结果：${message}`)]),
+          setMessages((prev) => [...prev, createMessage('tool', `执行结果：${message}`, { runId: currentRunId })]),
+        knowledge_hits: ({ hits }) =>
+          setMessages((prev) => [
+            ...prev,
+            createMessage('system', `命中 ${hits.length} 条知识片段`, {
+              runId: currentRunId,
+              knowledgeHits: hits
+            })
+          ]),
         draft: ({ drafts }) =>
           setMessages((prev) => [
             ...prev,
             createMessage('draft', '已生成任务草案，请确认后写入任务系统。', {
               drafts,
-              status: 'ready'
+              status: 'ready',
+              runId: currentRunId
             })
           ]),
         need_confirm: ({ message }) =>
-          setMessages((prev) => [...prev, createMessage('system', message)]),
-        error: ({ message }) =>
-          setMessages((prev) => [...prev, createMessage('error', message)]),
+          setMessages((prev) => [...prev, createMessage('system', message, { runId: currentRunId })]),
+        error: ({ message, runId }) =>
+          setMessages((prev) => [...prev, createMessage('error', message, { runId })]),
         done: () => finalizeAssistantMessage()
       });
     } catch (error) {
@@ -110,6 +156,7 @@ const AgentPage = () => {
       setMessages((prev) => [...prev, createMessage('error', 'Agent 执行失败，请检查服务或重试。')]);
     } finally {
       setIsRunning(false);
+      loadRuns();
     }
   };
 
@@ -117,13 +164,14 @@ const AgentPage = () => {
     if (!latestDraftMessage?.drafts?.length || isConfirming) return;
     setIsConfirming(true);
     try {
-      await confirmAgentDrafts(latestDraftMessage.drafts);
+      await confirmAgentDrafts(latestDraftMessage.drafts, latestDraftMessage.runId);
       setMessages((prev) =>
         prev.map((item) =>
           item.id === latestDraftMessage.id ? { ...item, status: 'confirmed', content: text.confirmSuccess } : item
         )
       );
       dispatch(fetchTaskList());
+      loadRuns();
     } catch (error) {
       console.error(error);
       setMessages((prev) => [...prev, createMessage('error', text.confirmFailed)]);
@@ -149,26 +197,70 @@ const AgentPage = () => {
       </section>
 
       <section className="agent-workbench">
-        <Card className="agent-panel control-panel">
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Segmented block options={agentOptions} value={agentType} onChange={handleAgentTypeChange} />
-            <TextArea
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              rows={6}
-              placeholder={text.placeholder}
-            />
-            <Button type="primary" onClick={handleRun} loading={isRunning}>
-              {text.send}
-            </Button>
-          </Space>
-        </Card>
+        <div className="side-stack">
+          <Card className="agent-panel control-panel">
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              <Segmented block options={agentOptions} value={agentType} onChange={handleAgentTypeChange} />
+              <TextArea
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                rows={6}
+                placeholder={text.placeholder}
+              />
+              <Button type="primary" onClick={handleRun} loading={isRunning}>
+                {text.send}
+              </Button>
+            </Space>
+          </Card>
+
+          <Card className="agent-panel run-panel" title={text.recentRuns}>
+            <div className="run-list">
+              {recentRuns.length === 0 ? <div className="empty-run">{text.noRuns}</div> : null}
+              {recentRuns.map((run) => (
+                <article key={run.id} className="run-card">
+                  <div className="run-head">
+                    <strong>{getAgentTypeLabel(run.agentType)}</strong>
+                    <Tag color={run.status === 'confirmed' ? 'green' : run.status === 'failed' ? 'red' : 'blue'}>
+                      {run.status}
+                    </Tag>
+                  </div>
+                  <div className="run-input">{run.input}</div>
+                  <div className="run-time">{dayjs(run.startedAt).format('MM-DD HH:mm')}</div>
+                  {run.knowledgeHits?.length ? (
+                    <div className="run-sources">
+                      {run.knowledgeHits.map((hit, index) => (
+                        <Tag key={`${run.id}-${index}`}>{hit.source}</Tag>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          </Card>
+        </div>
 
         <Card className="agent-panel output-panel">
           <div className="panel-title-row">
             <h3>执行记录</h3>
             <Tag color={isRunning ? 'processing' : 'default'}>{isRunning ? text.streaming : 'Ready'}</Tag>
           </div>
+
+          {latestKnowledgeMessage?.knowledgeHits?.length ? (
+            <section className="knowledge-section">
+              <div className="knowledge-title">{text.knowledgeTitle}</div>
+              <div className="knowledge-list">
+                {latestKnowledgeMessage.knowledgeHits.map((hit, index) => (
+                  <article className="knowledge-card" key={`${hit.source}-${index}`}>
+                    <div className="knowledge-head">
+                      <strong>{hit.source}</strong>
+                      <Tag>score {hit.score}</Tag>
+                    </div>
+                    <p>{hit.content}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <div className="message-list">
             {messages.length === 0 && <div className="empty-state">{text.idleHint}</div>}

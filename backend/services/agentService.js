@@ -1,5 +1,6 @@
 const { openai } = require('../openai');
 const { getUserTasks, summarizeTasks } = require('./taskService');
+const { searchKnowledge, formatKnowledgeContext } = require('./knowledgeBaseService');
 
 const AGENT_TYPES = {
   TASK_PLANNER: 'task_planner',
@@ -79,6 +80,25 @@ async function generateTaskDrafts({ input, tasks }) {
   });
 }
 
+function emitKnowledgeEvents(res, knowledgeResults, emptyMessage) {
+  writeEvent(res, 'tool_result', {
+    tool: 'search_knowledge',
+    message: knowledgeResults.length
+      ? `命中 ${knowledgeResults.length} 条知识片段：${knowledgeResults.map((item) => item.source).join('、')}`
+      : emptyMessage
+  });
+
+  if (knowledgeResults.length) {
+    writeEvent(res, 'knowledge_hits', {
+      hits: knowledgeResults.map((item) => ({
+        source: item.source,
+        content: item.content,
+        score: item.score
+      }))
+    });
+  }
+}
+
 async function runTaskPlanner({ userId, input, res }) {
   writeEvent(res, 'tool_start', {
     tool: 'get_user_tasks',
@@ -91,20 +111,35 @@ async function runTaskPlanner({ userId, input, res }) {
     message: `已读取 ${stats.total} 条任务，其中 ${stats.completed} 条已完成`
   });
 
-  await streamTextResponse({
+  writeEvent(res, 'tool_start', {
+    tool: 'search_knowledge',
+    message: '正在检索复习规范与项目文档'
+  });
+  const knowledgeResults = await searchKnowledge(userId, input, 4);
+  emitKnowledgeEvents(res, knowledgeResults, '未命中知识片段，使用通用任务拆解策略');
+  const knowledgeContext = formatKnowledgeContext(knowledgeResults);
+
+  const assistantText = await streamTextResponse({
     systemPrompt:
       'You are an execution-oriented task planning assistant. Explain briefly in Chinese how you are breaking the goal into actionable tasks. Keep it concise and practical.',
-    userPrompt: `用户目标：${input}\n现有任务概况：${JSON.stringify(stats)}\n现有任务列表：\n${buildTaskContext(tasks) || '暂无任务'}`,
+    userPrompt: `用户目标：${input}\n现有任务概况：${JSON.stringify(stats)}\n现有任务列表：\n${buildTaskContext(tasks) || '暂无任务'}\n\n可参考知识：\n${knowledgeContext}`,
     res
   });
 
-  const drafts = await generateTaskDrafts({ input, tasks });
-  writeEvent(res, 'draft', {
-    drafts
+  const drafts = await generateTaskDrafts({
+    input: `${input}\n\n参考知识：\n${knowledgeContext}`,
+    tasks
   });
+  writeEvent(res, 'draft', { drafts });
   writeEvent(res, 'need_confirm', {
     message: '已生成任务草案，确认后将写入任务系统。'
   });
+
+  return {
+    assistantText,
+    knowledgeHits: knowledgeResults,
+    draftCount: drafts.length
+  };
 }
 
 async function runProgressSummary({ userId, input, res }) {
@@ -119,12 +154,26 @@ async function runProgressSummary({ userId, input, res }) {
     message: `已汇总 ${stats.total} 条任务，开始生成进展摘要`
   });
 
-  await streamTextResponse({
+  writeEvent(res, 'tool_start', {
+    tool: 'search_knowledge',
+    message: '正在检索相关规范和项目文档'
+  });
+  const knowledgeResults = await searchKnowledge(userId, input || '任务进展总结', 3);
+  emitKnowledgeEvents(res, knowledgeResults, '未命中知识片段');
+  const knowledgeContext = formatKnowledgeContext(knowledgeResults);
+
+  const assistantText = await streamTextResponse({
     systemPrompt:
       'You are a project progress assistant. Reply in Chinese with a concise progress summary, current risks, blockers, and next actions.',
-    userPrompt: `补充说明：${input || '无'}\n任务统计：${JSON.stringify(stats)}\n任务列表：\n${buildTaskContext(tasks) || '暂无任务'}`,
+    userPrompt: `补充说明：${input || '无'}\n任务统计：${JSON.stringify(stats)}\n任务列表：\n${buildTaskContext(tasks) || '暂无任务'}\n\n可参考知识：\n${knowledgeContext}`,
     res
   });
+
+  return {
+    assistantText,
+    knowledgeHits: knowledgeResults,
+    draftCount: 0
+  };
 }
 
 async function runWeeklyReport({ userId, input, res }) {
@@ -139,12 +188,26 @@ async function runWeeklyReport({ userId, input, res }) {
     message: `已读取 ${stats.total} 条任务，开始生成周报`
   });
 
-  await streamTextResponse({
+  writeEvent(res, 'tool_start', {
+    tool: 'search_knowledge',
+    message: '正在检索项目文档与输出规范'
+  });
+  const knowledgeResults = await searchKnowledge(userId, input || '周报输出规范', 3);
+  emitKnowledgeEvents(res, knowledgeResults, '未命中知识片段');
+  const knowledgeContext = formatKnowledgeContext(knowledgeResults);
+
+  const assistantText = await streamTextResponse({
     systemPrompt:
       'You are a weekly report assistant. Reply in Chinese and organize the output into four sections: completed, in progress, risks, next week plan.',
-    userPrompt: `额外要求：${input || '无'}\n任务统计：${JSON.stringify(stats)}\n任务列表：\n${buildTaskContext(tasks) || '暂无任务'}`,
+    userPrompt: `额外要求：${input || '无'}\n任务统计：${JSON.stringify(stats)}\n任务列表：\n${buildTaskContext(tasks) || '暂无任务'}\n\n可参考知识：\n${knowledgeContext}`,
     res
   });
+
+  return {
+    assistantText,
+    knowledgeHits: knowledgeResults,
+    draftCount: 0
+  };
 }
 
 async function streamAgentRun({ userId, agentType, input, res }) {
@@ -154,18 +217,13 @@ async function streamAgentRun({ userId, agentType, input, res }) {
 
   switch (agentType) {
     case AGENT_TYPES.PROGRESS_SUMMARY:
-      await runProgressSummary({ userId, input, res });
-      break;
+      return runProgressSummary({ userId, input, res });
     case AGENT_TYPES.WEEKLY_REPORT:
-      await runWeeklyReport({ userId, input, res });
-      break;
+      return runWeeklyReport({ userId, input, res });
     case AGENT_TYPES.TASK_PLANNER:
     default:
-      await runTaskPlanner({ userId, input, res });
-      break;
+      return runTaskPlanner({ userId, input, res });
   }
-
-  writeEvent(res, 'done', { ok: true });
 }
 
 module.exports = {

@@ -18,6 +18,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"))
 const Layout = lazy(() => import("@/pages/Layout"));
 const BarChart = lazy(() => import("@/pages/BarChart"));
 const AgentPage = lazy(() => import("@/pages/Agent"));
+const KnowledgeBasePage = lazy(() => import("@/pages/KnowledgeBase"));
 
 
 // 私有路由守卫组件
@@ -41,6 +42,7 @@ const AppRouter = () => {
             <Route path="report" element={<Report />} />
             <Route path="barchart" element={<BarChart />}/>
             <Route path="agent" element={<AgentPage />} />
+            <Route path="knowledge" element={<KnowledgeBasePage />} />
             <Route path="profile" element={<Profile />} />
           </Route>
        

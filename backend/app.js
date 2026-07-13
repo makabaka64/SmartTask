@@ -44,12 +44,14 @@ const userinfoRouter = require('./router/userinfo');
 const taskRouter = require('./router/task');
 const summaryRouter = require('./router/summary');
 const agentRouter = require('./router/agent');
+const knowledgeRouter = require('./router/knowledge');
 
 app.use('/api', userRouter);
 app.use('/my', userinfoRouter);
 app.use('/task', taskRouter);
 app.use('/api', summaryRouter);
 app.use('/agent', agentRouter);
+app.use('/knowledge', knowledgeRouter);
 
 app.use((err, req, res, next) => {
   if (typeof res.cc !== 'function') {
