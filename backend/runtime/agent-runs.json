@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "id": "1783947288435-a15bb3",
+    "userId": 1,
+    "agentType": "task_planner",
+    "input": "帮我制定 3 周前端秋招复习计划，兼顾八股、算法、项目和 Agent 项目重构。",
+    "status": "failed",
+    "startedAt": "2026-07-13T12:54:48.435Z",
+    "completedAt": "2026-07-13T12:54:51.486Z",
+    "knowledgeHits": [],
+    "draftCount": 0,
+    "summary": "402 status code (no body)",
+    "confirmedTaskIds": []
+  },
+  {
+    "id": "1783948583483-bec441",
+    "userId": 1,
+    "agentType": "weekly_report",
+    "input": "基于当前任务生成一份本周周报，语气简洁，适合直接发给导师。",
+    "status": "failed",
+    "startedAt": "2026-07-13T13:16:23.483Z",
+    "completedAt": "2026-07-13T13:16:25.999Z",
+    "knowledgeHits": [],
+    "draftCount": 0,
+    "summary": "402 status code (no body)",
+    "confirmedTaskIds": []
+  }
+]

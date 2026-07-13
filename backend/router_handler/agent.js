@@ -1,6 +1,12 @@
 const { streamAgentRun, writeEvent } = require('../services/agentService');
 const { createTaskForUser, getUserTasks } = require('../services/taskService');
-const { createRun, updateRun, listRuns } = require('../services/agentRunLogService');
+const {
+  createRun,
+  updateRun,
+  listRuns,
+  getRun,
+  removeRun
+} = require('../services/agentRunLogService');
 
 exports.streamAgent = async (req, res) => {
   res.set({
@@ -105,12 +111,42 @@ exports.confirmDrafts = async (req, res) => {
 
 exports.getRuns = (req, res) => {
   try {
+    const data = listRuns().filter((run) => run.userId === req.user.id);
     res.send({
       status: 0,
       message: '获取 Agent 运行记录成功',
-      data: listRuns()
+      data
     });
   } catch (error) {
     res.cc(error);
   }
+};
+
+exports.getRunDetail = (req, res) => {
+  const runId = req.params.id;
+  const run = getRun(runId);
+
+  if (!run || run.userId !== req.user.id) {
+    return res.cc('运行记录不存在或无权限查看');
+  }
+
+  res.send({
+    status: 0,
+    message: '获取运行详情成功',
+    data: run
+  });
+};
+
+exports.deleteRun = (req, res) => {
+  const runId = req.params.id;
+  const ok = removeRun(runId, req.user.id);
+
+  if (!ok) {
+    return res.cc('运行记录不存在或无权限删除');
+  }
+
+  res.send({
+    status: 0,
+    message: '运行记录删除成功'
+  });
 };

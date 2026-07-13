@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Input, Segmented, Space, Tag } from 'antd';
+import { Button, Card, Drawer, Input, Popconfirm, Segmented, Space, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { useDispatch } from 'react-redux';
 import { fetchTaskList } from '@/store/modules/taskSlice';
 import type { AppDispatch } from '@/store';
 import type { AgentMessage, AgentRunLog, AgentType } from '@/types/agent';
 import { streamAgentRun } from '@/services/agentStreamService';
-import { confirmAgentDrafts, getAgentRuns } from '@/apis/agent';
+import {
+  confirmAgentDrafts,
+  deleteAgentRun,
+  getAgentRunDetail,
+  getAgentRuns
+} from '@/apis/agent';
 import './index.scss';
 
 const { TextArea } = Input;
@@ -27,7 +32,7 @@ const text = {
   badge: 'Agent 工作台',
   title: '让任务系统具备可执行的 AI 助手',
   description:
-    '在这里发起任务拆解、进展摘要或周报生成。',
+    '在这里发起任务拆解、进展摘要或周报生成，重点体现结构化草案、知识增强、流式过程和确认落库闭环。',
   send: '运行 Agent',
   confirm: '确认创建任务',
   confirmed: '已创建',
@@ -39,7 +44,14 @@ const text = {
   confirmFailed: '创建失败，请稍后重试。',
   knowledgeTitle: '知识命中',
   recentRuns: '最近运行',
-  noRuns: '暂无运行记录'
+  noRuns: '暂无运行记录',
+  runDetail: '运行详情',
+  deleteRun: '删除记录',
+  deleteConfirm: '确定删除这条运行记录吗？',
+  summary: '结果摘要',
+  input: '输入内容',
+  knowledge: '命中知识',
+  confirmedTasks: '创建任务 ID'
 };
 
 function createMessage(role: AgentMessage['role'], content: string, extra?: Partial<AgentMessage>): AgentMessage {
@@ -61,6 +73,8 @@ const AgentPage = () => {
   const [input, setInput] = useState(presets.task_planner);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [recentRuns, setRecentRuns] = useState<AgentRunLog[]>([]);
+  const [selectedRun, setSelectedRun] = useState<AgentRunLog | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string>();
   const [isRunning, setIsRunning] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -180,6 +194,31 @@ const AgentPage = () => {
     }
   };
 
+  const handleOpenRunDetail = async (runId: string) => {
+    try {
+      const res = await getAgentRunDetail(runId);
+      if (res.status === 0) {
+        setSelectedRun(res.data);
+        setDetailOpen(true);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDeleteRun = async (runId: string) => {
+    try {
+      await deleteAgentRun(runId);
+      if (selectedRun?.id === runId) {
+        setDetailOpen(false);
+        setSelectedRun(null);
+      }
+      loadRuns();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const handleAgentTypeChange = (value: string | number) => {
     const nextType = value as AgentType;
     setAgentType(nextType);
@@ -233,6 +272,21 @@ const AgentPage = () => {
                       ))}
                     </div>
                   ) : null}
+                  <div className="run-actions">
+                    <Button type="link" onClick={() => handleOpenRunDetail(run.id)}>
+                      {text.runDetail}
+                    </Button>
+                    <Popconfirm
+                      title={text.deleteConfirm}
+                      onConfirm={() => handleDeleteRun(run.id)}
+                      okText={text.deleteRun}
+                      cancelText="取消"
+                    >
+                      <Button type="link" danger>
+                        {text.deleteRun}
+                      </Button>
+                    </Popconfirm>
+                  </div>
                 </article>
               ))}
             </div>
@@ -302,6 +356,56 @@ const AgentPage = () => {
           </div>
         </Card>
       </section>
+
+      <Drawer
+        title={text.runDetail}
+        open={detailOpen}
+        width={480}
+        onClose={() => {
+          setDetailOpen(false);
+          setSelectedRun(null);
+        }}
+      >
+        {selectedRun ? (
+          <div className="run-detail">
+            <div className="detail-block">
+              <div className="detail-label">{text.input}</div>
+              <div className="detail-content">{selectedRun.input}</div>
+            </div>
+
+            <div className="detail-block">
+              <div className="detail-label">{text.summary}</div>
+              <div className="detail-content">{selectedRun.summary || '暂无摘要'}</div>
+            </div>
+
+            <div className="detail-block">
+              <div className="detail-label">{text.knowledge}</div>
+              <div className="detail-list">
+                {selectedRun.knowledgeHits?.length ? (
+                  selectedRun.knowledgeHits.map((hit, index) => (
+                    <article key={`${selectedRun.id}-${index}`} className="detail-knowledge-card">
+                      <div className="detail-knowledge-head">
+                        <strong>{hit.source}</strong>
+                        <Tag>{hit.score}</Tag>
+                      </div>
+                      <p>{hit.content}</p>
+                    </article>
+                  ))
+                ) : (
+                  <div className="detail-content">未命中知识片段</div>
+                )}
+              </div>
+            </div>
+
+            <div className="detail-block">
+              <div className="detail-label">{text.confirmedTasks}</div>
+              <div className="detail-content">
+                {selectedRun.confirmedTaskIds?.length ? selectedRun.confirmedTaskIds.join(', ') : '无'}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </Drawer>
     </div>
   );
 };

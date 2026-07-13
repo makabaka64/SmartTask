@@ -8,3 +8,11 @@ export const confirmAgentDrafts = (drafts: AgentDraftTask[], runId?: string) => 
 export const getAgentRuns = (): Promise<{ status: number; data: AgentRunLog[] }> => {
   return request.get('/agent/runs');
 };
+
+export const getAgentRunDetail = (id: string): Promise<{ status: number; data: AgentRunLog }> => {
+  return request.get(`/agent/runs/${id}`);
+};
+
+export const deleteAgentRun = (id: string) => {
+  return request.delete(`/agent/runs/${id}`);
+};

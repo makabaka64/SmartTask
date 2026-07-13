@@ -223,8 +223,64 @@
     justify-content: flex-start;
   }
 
+  .run-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
   .empty-run {
     color: #667085;
+  }
+
+  .run-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .detail-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .detail-label {
+    color: #344054;
+    font-weight: 700;
+  }
+
+  .detail-content {
+    color: #475467;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  .detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .detail-knowledge-card {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  .detail-knowledge-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .detail-knowledge-card p {
+    margin: 8px 0 0;
+    color: #667085;
+    line-height: 1.6;
   }
 }
 

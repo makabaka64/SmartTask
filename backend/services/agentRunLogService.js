@@ -16,8 +16,7 @@ function ensureStore() {
 function readRuns() {
   ensureStore();
   try {
-    const content = fs.readFileSync(LOG_FILE, 'utf-8');
-    return JSON.parse(content);
+    return JSON.parse(fs.readFileSync(LOG_FILE, 'utf-8'));
   } catch (error) {
     return [];
   }
@@ -29,10 +28,13 @@ function writeRuns(runs) {
 }
 
 function listRuns(limit = 12) {
-  const runs = readRuns();
-  return runs
+  return readRuns()
     .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
     .slice(0, limit);
+}
+
+function getRun(runId) {
+  return readRuns().find((run) => run.id === runId) || null;
 }
 
 function createRun({ userId, agentType, input }) {
@@ -62,8 +64,21 @@ function updateRun(runId, patch) {
   return nextRuns.find((run) => run.id === runId) || null;
 }
 
+function removeRun(runId, userId) {
+  const runs = readRuns();
+  const target = runs.find((run) => run.id === runId);
+  if (!target || target.userId !== userId) {
+    return false;
+  }
+
+  writeRuns(runs.filter((run) => run.id !== runId));
+  return true;
+}
+
 module.exports = {
   listRuns,
+  getRun,
   createRun,
-  updateRun
+  updateRun,
+  removeRun
 };
