@@ -1,58 +1,60 @@
-const OpenAI = require("openai");
-const config = require("./config");
-const { HttpsProxyAgent } = require("https-proxy-agent");
-const fetch = require("node-fetch");
-const proxyAgent = new HttpsProxyAgent("http://127.0.0.1:7890"); // 使用我的代理服务器地址和端口
-// 初始化 OpenAI 客户端
+const OpenAI = require('openai');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const fetch = require('node-fetch');
+const config = require('./config');
+
+const proxyAgent = config.HTTPS_PROXY_URL
+  ? new HttpsProxyAgent(config.HTTPS_PROXY_URL)
+  : null;
+
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
-  baseURL: "https://api.deepseek.com",
+  baseURL: config.OPENAI_BASE_URL,
   fetch: (url, options = {}) =>
     fetch(url, {
       ...options,
-      dispatcher: proxyAgent, // undici 用 dispatcher
+      ...(proxyAgent ? { agent: proxyAgent } : {}),
     }),
 });
 
-async function streamSummary(text, res, { lastEventId = null, previous = "" }) {
+async function streamSummary(text, res, { lastEventId = null, previous = '' }) {
   try {
     const stream = await openai.chat.completions.create({
-      model: "deepseek-v4-flash",
+      model: 'deepseek-v4-flash',
       store: true,
       messages: [
         {
-          role: "system",
-          content: "你是一个任务助手，请将以下内容描述浓缩为一句摘要",
+          role: 'system',
+          content: '你是一个任务助手，请将以下内容描述浓缩为一句摘要。',
         },
-        { role: "user", content: text },
+        { role: 'user', content: text },
       ],
       stream: true,
     });
-    // 设置响应头
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
 
     let fullContent = previous;
-    let eventId = Number(lastEventId) || 0; // 断点续传的事件ID起点
-    // 循环接收ai返回的流式数据
+    let eventId = Number(lastEventId) || 0;
+
     for await (const chunk of stream) {
       const delta = chunk.choices?.[0]?.delta?.content;
       if (delta) {
-        eventId++;
+        eventId += 1;
         fullContent += delta;
 
-        // 每个片段都带唯一ID
         res.write(`id: ${eventId}\n`);
         res.write(`data: ${delta}\n\n`);
       }
     }
-    // 完成
-    res.write(`event: done\ndata: [DONE]\n\n`);
+
+    res.write('event: done\ndata: [DONE]\n\n');
     res.end();
   } catch (err) {
-    console.error("OpenAI API:", err);
-    res.write(`event: error\ndata: {"message": "AI摘要失败"}\n\n`);
+    console.error('OpenAI API:', err);
+    res.write('event: error\ndata: {"message": "AI摘要失败"}\n\n');
     res.end();
   }
 }

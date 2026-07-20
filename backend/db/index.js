@@ -1,20 +1,21 @@
-// 导入 mysql 模块
-const mysql = require('mysql')
+const mysql = require('mysql');
+const config = require('../config');
 
-// 创建数据库连接对象
 const db = mysql.createPool({
-  host: '127.0.0.1',
-  user: 'root',
-  password: '123456',
-  database: 'smarttask',
-})
+  host: config.db.host,
+  user: config.db.user,
+  password: config.db.password,
+  database: config.db.database,
+});
+
 db.getConnection((err, conn) => {
-    if (err) {
-      console.error('数据库连接失败:', err)
-    } else {
-      console.log('数据库连接成功')
-      conn.release()
-    }
-  })
-// 向外共享 db 数据库连接对象
-module.exports = db
+  if (err) {
+    console.error('Database connection failed:', err);
+    return;
+  }
+
+  console.log('Database connected successfully');
+  conn.release();
+});
+
+module.exports = db;

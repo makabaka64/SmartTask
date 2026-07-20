@@ -4,7 +4,6 @@ const joi = require('joi');
 const config = require('./config');
 const expressJWT = require('express-jwt');
 const cookieParser = require('cookie-parser');
-require('dotenv').config();
 
 const app = express();
 

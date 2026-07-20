@@ -1,12 +1,13 @@
 // scripts/initRolesAndPermissions.js
 const mysql = require('mysql2/promise')
+const config = require('../config')
 
 // 配置连接参数
 const dbConfig = {
-  host: '127.0.0.1',
-  user: 'root',
-  password: '123456',
-  database: 'smarttask',
+  host: config.db.host,
+  user: config.db.user,
+  password: config.db.password,
+  database: config.db.database,
 }
 
 const roles = [
