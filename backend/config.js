@@ -11,6 +11,12 @@ function numberEnv(name, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function booleanEnv(name, fallback = false) {
+  const value = process.env[name];
+  if (value === undefined || value === '') return fallback;
+  return value === 'true';
+}
+
 function requiredEnv(name) {
   const value = process.env[name];
   if (!value) {
@@ -43,6 +49,15 @@ module.exports = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_BASE_URL: process.env.OPENAI_BASE_URL || 'https://api.deepseek.com',
   HTTPS_PROXY_URL: process.env.HTTPS_PROXY_URL,
+
+  embedding: {
+    apiKey: process.env.EMBEDDING_API_KEY || process.env.OPENAI_API_KEY,
+    baseURL: process.env.EMBEDDING_BASE_URL || process.env.OPENAI_BASE_URL,
+    model: process.env.EMBEDDING_MODEL || '',
+    dimensions: numberEnv('EMBEDDING_DIMENSIONS', 384),
+    proxyURL: process.env.EMBEDDING_PROXY_URL || '',
+    useLocalFallback: booleanEnv('EMBEDDING_LOCAL_FALLBACK', true),
+  },
 
   db: {
     host: process.env.DB_HOST || '127.0.0.1',

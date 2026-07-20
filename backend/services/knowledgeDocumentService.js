@@ -1,4 +1,8 @@
 const db = require('../db/index');
+const {
+  syncChunksForDocument,
+  deleteChunksByDocument,
+} = require('./knowledgeChunkService');
 
 let schemaReady = false;
 
@@ -48,21 +52,37 @@ async function createKnowledgeDocument(userId, payload) {
      VALUES (?, ?, ?, ?)`,
     [userId, payload.title, payload.content, payload.category || 'general']
   );
+  await syncChunksForDocument(userId, {
+    id: result.insertId,
+    title: payload.title,
+    content: payload.content,
+    category: payload.category || 'general',
+  });
   return result.insertId;
 }
 
 async function updateKnowledgeDocument(userId, documentId, payload) {
   await ensureKnowledgeTable();
-  return query(
+  const result = await query(
     `UPDATE knowledge_document
      SET title = ?, content = ?, category = ?
      WHERE id = ? AND user_id = ?`,
     [payload.title, payload.content, payload.category || 'general', documentId, userId]
   );
+  if (result.affectedRows === 1) {
+    await syncChunksForDocument(userId, {
+      id: documentId,
+      title: payload.title,
+      content: payload.content,
+      category: payload.category || 'general',
+    });
+  }
+  return result;
 }
 
 async function deleteKnowledgeDocument(userId, documentId) {
   await ensureKnowledgeTable();
+  await deleteChunksByDocument(userId, documentId);
   return query(`DELETE FROM knowledge_document WHERE id = ? AND user_id = ?`, [documentId, userId]);
 }
 

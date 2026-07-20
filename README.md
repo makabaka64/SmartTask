@@ -1,94 +1,127 @@
-# 智能任务管理平台 SmartTask
+# SmartTask 智能任务管理平台
 
-一个前后端分离的智能任务管理系统，围绕“任务协作 + 权限控制 + AI 辅助 + 知识沉淀 + 数据看板”展开。当前仓库包含完整的 React 前端和 Express 后端，已实现任务创建与协作、邀请通知、AI 任务拆解、知识库检索增强、流式摘要和可视化统计等能力。
+SmartTask 是一个前后端分离的智能任务管理系统，围绕任务协作、权限控制、通知提醒、AI Agent、知识库检索增强和数据看板展开。
 
-## 项目功能
+项目包含 React + Vite + TypeScript 前端，以及 Express + MySQL 后端。当前已实现任务管理、成员协作、权限控制、邮件验证码、到期提醒、Agent 任务拆解、周报/进度总结、知识库 RAG 检索增强和可视化统计。
 
-### 1. 用户与认证
+## 核心功能
 
-- 邮箱验证码注册
-- 邮箱密码登录
-- `JWT Access Token + Refresh Token Cookie` 双令牌认证
-- 获取和修改个人资料
-- 修改密码、更新头像
+### 用户与认证
 
-### 2. 任务管理
+- 邮箱验证码注册与邮箱密码登录。
+- `JWT Access Token + Refresh Token Cookie` 双令牌认证。
+- 支持获取和修改个人资料、修改密码、更新头像。
 
-- 创建任务，包含标题、描述、开始时间、截止时间
-- 任务列表按当前用户可见范围查询
-- 任务详情查看
-- 更新任务描述与完成状态
-- 删除任务
-- 仪表盘中按时间和状态自动分组为：
-  - 进行中
-  - 待开始
-  - 已逾期
-  - 已完成
-- 支持拖拽排序，并持久化任务顺序
+### 任务管理
 
-### 3. 协作与权限
+- 创建、查看、更新、删除任务。
+- 支持任务标题、描述、开始时间、截止时间、完成状态。
+- 仪表盘按任务时间和状态分组展示。
+- 支持拖拽排序并持久化任务顺序。
 
-- 创建任务时自动把创建者绑定为 `admin`
-- 基于 `role / permission / user_task_role` 的任务级权限控制
-- 当前脚本内置的权限包括：
-  - `create_task`
-  - `edit_task`
-  - `delete_task`
-  - `view_task`
-  - `member_manage`
-- 支持邀请成员加入任务
-- 被邀请成员可在消息中心接受邀请
-- 支持查看任务成员、移除成员
+### 协作与权限
 
-### 4. 通知与提醒
+- 创建任务时自动将创建者绑定为 `admin`。
+- 基于 `role / permission / user_task_role` 做任务级权限控制。
+- 内置权限包括 `create_task`、`edit_task`、`delete_task`、`view_task`、`member_manage`。
+- 支持邀请成员加入任务、成员接受邀请、查看成员和移除成员。
 
-- 消息中心展示协作邀请和系统提醒
-- 后端定时任务每分钟扫描一次未来 24 小时内到期且未提醒过的任务
-- 到期提醒会写入 `notification` 表，前端轮询展示
+### 通知与提醒
 
-### 5. AI 能力
+- 消息中心展示协作邀请和系统提醒。
+- 后端定时任务每分钟扫描未来 24 小时内即将到期且未提醒过的任务。
+- 到期提醒写入 `notification` 表，前端轮询展示。
 
-#### 任务流式摘要
-
-- 支持基于任务描述生成 AI 摘要
-- 使用 `SSE` 流式返回内容
-- 前端具备断线重连和断点续传处理
-
-#### Agent 工作台
+### AI Agent
 
 已实现 3 类 Agent：
 
-- `task_planner`：根据目标自动拆解任务草案
-- `progress_summary`：汇总当前任务进展、风险和下一步动作
-- `weekly_report`：根据任务生成结构化周报
+- `task_planner`：根据用户目标自动拆解任务草稿。
+- `progress_summary`：汇总当前任务进展、风险和下一步动作。
+- `weekly_report`：根据任务生成结构化周报。
 
 Agent 工作流包含：
 
-- 读取当前用户任务
-- 检索个人知识库内容
-- 流式返回推理过程和结果
-- 对任务拆解结果生成草案
-- 用户确认后批量写入任务系统
-- 保存最近运行记录，可查看详情和删除记录
+- 读取当前用户任务。
+- 检索个人知识库。
+- 流式返回执行过程和结果。
+- 生成任务草稿。
+- 用户确认后批量写入任务系统。
+- 保存最近运行记录，支持查看详情和删除。
 
-### 6. 知识库
+## 轻量级 RAG 知识库
 
-- 用户可创建、编辑、删除个人知识文档
-- 文档支持分类：
-  - `review`
-  - `project`
-  - `report`
-  - `general`
-- 后端会自动创建 `knowledge_document` 表
-- Agent 执行时会对知识文档做简单分词、切块和相关性匹配，用于检索增强
+项目已接入轻量级 RAG 流程，用于让 Agent 在任务规划、进度总结和周报生成前检索用户私有知识。
 
-### 7. 数据可视化
+### 当前 RAG 流程
 
-看板页面基于 `Recharts` 展示：
+```text
+用户录入知识文档
+→ 保存到 knowledge_document
+→ 自动切分为 chunk
+→ 调用 Embedding 模型生成向量
+→ 保存到 knowledge_chunk
 
-- 任务完成占比饼图
-- 每日任务创建趋势折线图
-- 每日到期任务数量柱状图
+Agent 执行
+→ 用户输入生成 query embedding
+→ 与 knowledge_chunk 中的 chunk embedding 计算余弦相似度
+→ 召回 Top-K 相关知识片段
+→ 注入 Agent 上下文
+→ DeepSeek 生成任务规划、进度总结或周报
+```
+
+### 实现说明
+
+- 文档原文存储在 MySQL 表 `knowledge_document`。
+- 文档 chunk 和向量存储在 MySQL 表 `knowledge_chunk`。
+- 当前没有单独部署 Qdrant、Milvus 等独立向量数据库。
+- 小规模知识库下，后端在 Node.js 中计算余弦相似度完成 Top-K 检索。
+- 如果没有可用的真实 Embedding 配置，可使用本地 fallback embedding 跑通开发流程。
+- 如果知识库扩大到十万级 chunk 或需要低延迟检索，可迁移到 `pgvector`、`Qdrant` 或 `Milvus`。
+
+### 相关后端模块
+
+- `backend/services/embeddingService.js`：生成 embedding，支持 OpenAI 兼容接口和本地 fallback。
+- `backend/services/knowledgeChunkService.js`：负责文档切块、chunk 表创建、向量入库和查询。
+- `backend/services/knowledgeBaseService.js`：负责 query embedding、余弦相似度检索、Top-K 返回。
+- `backend/services/knowledgeDocumentService.js`：负责知识文档增删改查，并同步维护 chunk。
+- `backend/scripts/rebuildKnowledgeChunks.js`：用于回填历史知识文档的 chunk 和 embedding。
+
+### Embedding 配置
+
+聊天生成使用 DeepSeek，Embedding 使用阿里百炼 OpenAI 兼容接口。配置位于 `backend/.env`：
+
+```env
+OPENAI_API_KEY=你的 DeepSeek Key
+OPENAI_BASE_URL=https://api.deepseek.com
+
+EMBEDDING_API_KEY=你的阿里百炼 Key
+EMBEDDING_BASE_URL=https://你的业务空间域名/compatible-mode/v1
+EMBEDDING_MODEL=text-embedding-v3
+EMBEDDING_DIMENSIONS=1024
+EMBEDDING_PROXY_URL=
+EMBEDDING_LOCAL_FALLBACK=false
+```
+
+如果暂时没有真实 Embedding Key，可以使用开发 fallback：
+
+```env
+EMBEDDING_MODEL=
+EMBEDDING_LOCAL_FALLBACK=true
+```
+
+注意：fallback embedding 只适合开发演示，不等价于真实语义 Embedding。
+
+### 回填历史知识库
+
+如果项目里已经有旧知识文档，需要运行一次回填脚本：
+
+```bash
+cd backend
+npm run rebuild:knowledge
+```
+
+之后新增或更新知识文档时，会自动重新切 chunk 并生成 embedding。
 
 ## 技术栈
 
@@ -114,57 +147,41 @@ Agent 工作流包含：
 - nodemailer
 - node-schedule
 - OpenAI SDK
+- DeepSeek Chat API
+- 阿里百炼 Embedding API
 
 ## 目录结构
 
 ```text
 .
-├─ backend/                 # Express 后端
-│  ├─ app.js                # 应用入口
-│  ├─ config.js             # JWT、邮箱、AI 配置
-│  ├─ db/                   # MySQL 连接
-│  ├─ router/               # 路由定义
-│  ├─ router_handler/       # 控制器
-│  ├─ services/             # 任务、知识库、Agent 服务
-│  ├─ scripts/              # 角色权限初始化脚本
-│  └─ runtime/              # Agent 运行记录
-└─ react-vite-ts/           # React 前端
-   ├─ src/pages/            # 页面
-   ├─ src/apis/             # 接口封装
-   ├─ src/services/         # SSE / Agent 流式服务
-   ├─ src/store/            # Redux 状态管理
-   └─ src/components/       # 组件
+├── backend/                 # Express 后端
+│   ├── app.js               # 应用入口
+│   ├── config.js            # 环境变量配置
+│   ├── db/                  # MySQL 连接
+│   ├── router/              # 路由定义
+│   ├── router_handler/      # 控制器
+│   ├── services/            # 任务、知识库、RAG、Agent 服务
+│   ├── scripts/             # 初始化和知识库回填脚本
+│   └── runtime/             # Agent 运行记录
+└── react-vite-ts/           # React 前端
+    ├── src/pages/           # 页面
+    ├── src/apis/            # 接口封装
+    ├── src/services/        # SSE / Agent 流式服务
+    ├── src/store/           # Redux 状态管理
+    └── src/components/      # 组件
 ```
-
-## 页面说明
-
-- `/login`：登录 / 注册
-- `/dashboard`：任务面板
-- `/task/:id`：任务详情、成员、删除操作
-- `/barchart`：实时看板
-- `/agent`：Agent 工作台
-- `/knowledge`：知识库
-- `/report`：消息中心
-- `/profile`：个人中心
 
 ## 本地运行
 
 ### 1. 准备数据库
 
-项目依赖 MySQL，默认连接配置写在以下文件中：
+项目依赖 MySQL。请先创建数据库：
 
-- `backend/db/index.js`
-- `backend/router_handler/summary.js`
-- `backend/scripts/initRolesAndPermissions.js`
+```sql
+CREATE DATABASE smarttask DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
 
-当前代码中的默认数据库配置为：
-
-- host: `127.0.0.1`
-- user: `root`
-- password: `123456`
-- database: `smarttask`
-
-你需要先创建 `smarttask` 数据库，并准备项目运行所需的基础表，例如：
+基础业务表包括：
 
 - `user`
 - `task`
@@ -174,10 +191,10 @@ Agent 工作流包含：
 - `user_task_role`
 - `notification`
 
-说明：
+知识库相关表会由后端自动创建：
 
-- `knowledge_document` 表会在首次访问知识库时自动创建
-- 角色和权限可以通过脚本初始化
+- `knowledge_document`
+- `knowledge_chunk`
 
 初始化角色与权限：
 
@@ -186,7 +203,17 @@ cd backend
 node scripts/initRolesAndPermissions.js
 ```
 
-### 2. 启动后端
+### 2. 配置环境变量
+
+复制 `backend/.env.example` 为 `backend/.env`，并填写：
+
+- MySQL 配置。
+- JWT Secret。
+- 邮箱 SMTP 配置。
+- DeepSeek Chat API 配置。
+- 阿里百炼 Embedding API 配置。
+
+### 3. 启动后端
 
 ```bash
 cd backend
@@ -194,13 +221,13 @@ npm install
 node app.js
 ```
 
-默认启动地址：
+默认地址：
 
 ```text
 http://localhost:3001
 ```
 
-### 3. 启动前端
+### 4. 启动前端
 
 ```bash
 cd react-vite-ts
@@ -208,27 +235,21 @@ npm install
 pnpm dev
 ```
 
-默认启动地址：
+默认地址：
 
 ```text
 http://localhost:5173
 ```
 
-## AI 与邮件配置
+## 本项目的 RAG 部分
 
-当前仓库中的 AI、邮箱、JWT 等配置集中在 `backend/config.js`，AI 客户端封装位于 `backend/openai.js`。
 
-当前实现特点：
+> 项目实现了一个面向智能任务管理场景的轻量级 RAG 知识库模块。用户录入知识文档后，系统会进行 chunk 切分，并通过阿里百炼 `text-embedding-v3` 生成 1024 维向量存入 MySQL。Agent 执行时，会对用户输入生成 query embedding，通过余弦相似度召回 Top-K 相关知识片段，再注入 DeepSeek 的上下文中生成任务规划、进度总结或周报。考虑到当前知识库规模较小，没有额外引入独立向量数据库；后续数据量扩大时可以迁移到 pgvector、Qdrant 或 Milvus。
 
-- 后端调用 OpenAI SDK
-- `baseURL` 指向 `https://api.deepseek.com`
-- 模型名使用 `deepseek-v4-flash`
-- 邮箱验证码通过 QQ SMTP 发送
-- 默认允许前端地址 `http://localhost:5173` 跨域访问
+## 项目亮点
 
-## 仓库亮点
-
-- 不是单纯的 Todo 应用，而是把任务系统、协作权限、通知、知识库和 AI 工作流串起来了
-- Agent 支持“生成任务草案 -> 人工确认 -> 写回任务系统”的闭环
-- 知识库已接入到 Agent 检索链路中，具备基础的检索增强能力
-- 任务摘要和 Agent 结果都支持流式输出，交互体验比同步接口更完整
+- 不是单纯 Todo 应用，而是整合了任务管理、协作权限、通知、AI Agent、RAG 知识库和数据看板。
+- Agent 支持“生成任务草稿 -> 人工确认 -> 写回任务系统”的闭环。
+- 知识库已从关键词检索升级为基于 Embedding 的轻量级 RAG。
+- RAG 支持真实 Embedding 接口和本地 fallback，方便开发和演示。
+- 任务摘要和 Agent 结果均支持流式输出，交互体验更完整。

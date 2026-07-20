@@ -1,4 +1,6 @@
 const { getKnowledgeDocumentsForSearch } = require('./knowledgeDocumentService');
+const { createEmbedding } = require('./embeddingService');
+const { listChunksForSearch } = require('./knowledgeChunkService');
 
 function tokenize(text) {
   const rawTokens = text.toLowerCase().match(/[a-z0-9_]+|[\u4e00-\u9fa5]+/g) || [];
@@ -42,6 +44,62 @@ function scoreChunk(queryTokens, chunk) {
 }
 
 async function searchKnowledge(userId, query, limit = 4) {
+  const vectorResults = await searchKnowledgeByVector(userId, query, limit);
+  if (vectorResults.length) return vectorResults;
+
+  return searchKnowledgeByKeyword(userId, query, limit);
+}
+
+function cosineSimilarity(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+    return 0;
+  }
+
+  let dot = 0;
+  let aNorm = 0;
+  let bNorm = 0;
+
+  for (let i = 0; i < a.length; i += 1) {
+    dot += a[i] * b[i];
+    aNorm += a[i] * a[i];
+    bNorm += b[i] * b[i];
+  }
+
+  if (!aNorm || !bNorm) return 0;
+  return dot / (Math.sqrt(aNorm) * Math.sqrt(bNorm));
+}
+
+function parseEmbedding(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+async function searchKnowledgeByVector(userId, query, limit = 4) {
+  const chunks = await listChunksForSearch(userId);
+  if (!chunks.length) return [];
+
+  const queryEmbedding = await createEmbedding(query);
+
+  return chunks
+    .map((chunk) => ({
+      id: chunk.id,
+      source: chunk.source_title,
+      category: chunk.category,
+      content: chunk.content,
+      score: cosineSimilarity(queryEmbedding, parseEmbedding(chunk.embedding)),
+      retrieval: 'vector',
+      embeddingModel: chunk.embedding_model,
+    }))
+    .filter((chunk) => chunk.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
+async function searchKnowledgeByKeyword(userId, query, limit = 4) {
   const docs = await getKnowledgeDocumentsForSearch(userId);
   const queryTokens = tokenize(query);
   if (!queryTokens.length) return [];
@@ -69,7 +127,8 @@ async function searchKnowledge(userId, query, limit = 4) {
       source,
       category,
       content,
-      score
+      score,
+      retrieval: 'keyword'
     }));
 }
 
