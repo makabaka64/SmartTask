@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import {
+  BoldOutlined,
+  FileTextOutlined,
+  FontSizeOutlined,
+  TableOutlined,
+  UnorderedListOutlined
+} from '@ant-design/icons';
 import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Tag } from 'antd';
 import dayjs from 'dayjs';
 import {
@@ -13,11 +20,30 @@ import './index.scss';
 const { TextArea } = Input;
 
 const categoryOptions = [
-  { label: '复习规范', value: 'review' },
-  { label: '项目文档', value: 'project' },
-  { label: '周报模板', value: 'report' },
+  { label: '项目资料', value: 'project' },
+  { label: '工作规范', value: 'guideline' },
+  { label: '汇报模板', value: 'report' },
+  { label: '个人笔记', value: 'note' },
   { label: '通用知识', value: 'general' }
 ];
+
+const markdownTemplate = `# 知识主题
+
+## 背景
+- 这里写这篇知识适用的项目、任务或场景。
+
+## 关键规则
+- 规则 1：
+- 规则 2：
+
+## 执行步骤
+1. 第一步：
+2. 第二步：
+
+## 注意事项
+- 风险或限制：
+- Agent 回答时需要优先遵守：
+`;
 
 type KnowledgeFormValues = {
   title: string;
@@ -45,7 +71,7 @@ const text = {
   categoryLabel: '分类',
   contentLabel: '内容',
   titlePlaceholder: '例如：前端秋招复习规范 / SmartTask 项目设计约束',
-  contentPlaceholder: '输入 Agent 需要参考的知识内容，建议按段落组织。',
+  contentPlaceholder: '使用 Markdown 编写，例如：# 背景、## 规则、- 列表、| 表格 |。也可以点击上方模板快速开始。',
   loadFailed: '获取知识库失败，请稍后重试。',
   saveSuccess: '知识文档保存成功。',
   deleteSuccess: '知识文档删除成功。',
@@ -147,6 +173,21 @@ const KnowledgeBasePage = () => {
     }
   };
 
+  const appendMarkdown = (snippet: string) => {
+    const current = String(form.getFieldValue('content') || '');
+    const separator = current.trim() ? '\n\n' : '';
+    form.setFieldValue('content', `${current}${separator}${snippet}`);
+  };
+
+  const applyTemplate = () => {
+    const current = String(form.getFieldValue('content') || '');
+    if (!current.trim()) {
+      form.setFieldValue('content', markdownTemplate);
+      return;
+    }
+    appendMarkdown(markdownTemplate);
+  };
+
   return (
     <div className="knowledge-page">
       <section className="knowledge-hero">
@@ -244,6 +285,59 @@ const KnowledgeBasePage = () => {
               </Form.Item>
             </Space>
           </Form.Item>
+
+          <div className="markdown-toolbar">
+            <Button
+              htmlType="button"
+              size="small"
+              icon={<FontSizeOutlined />}
+              onClick={() => appendMarkdown('# 标题')}
+            >
+              H1
+            </Button>
+            <Button
+              htmlType="button"
+              size="small"
+              icon={<FontSizeOutlined />}
+              onClick={() => appendMarkdown('## 小节')}
+            >
+              H2
+            </Button>
+            <Button
+              htmlType="button"
+              size="small"
+              icon={<BoldOutlined />}
+              onClick={() => appendMarkdown('**重点内容**')}
+            >
+              加粗
+            </Button>
+            <Button
+              htmlType="button"
+              size="small"
+              icon={<UnorderedListOutlined />}
+              onClick={() => appendMarkdown('- 条目一\n- 条目二\n- 条目三')}
+            >
+              列表
+            </Button>
+            <Button
+              htmlType="button"
+              size="small"
+              icon={<TableOutlined />}
+              onClick={() =>
+                appendMarkdown('| 字段 | 说明 |\n| --- | --- |\n| 名称 | 内容 |')
+              }
+            >
+              表格
+            </Button>
+            <Button
+              htmlType="button"
+              size="small"
+              icon={<FileTextOutlined />}
+              onClick={applyTemplate}
+            >
+              模板
+            </Button>
+          </div>
 
           <Form.Item
             name="content"
