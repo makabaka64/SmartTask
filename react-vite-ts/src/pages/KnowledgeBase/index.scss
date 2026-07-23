@@ -50,12 +50,21 @@
   }
 
   .knowledge-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
     margin-bottom: 12px;
     color: #667085;
     font-size: 13px;
   }
 
   .knowledge-content {
+    max-height: 180px;
+    overflow: auto;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(248, 250, 252, 0.82);
     color: #344054;
     white-space: pre-wrap;
     line-height: 1.8;

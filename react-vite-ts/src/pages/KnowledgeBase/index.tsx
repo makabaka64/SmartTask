@@ -54,6 +54,13 @@ type KnowledgeFormValues = {
   metadataUseCase?: string;
 };
 
+type KnowledgeMetadata = {
+  source?: string;
+  tags?: string[];
+  useCase?: string;
+  [key: string]: unknown;
+};
+
 const text = {
   badge: '知识库',
   title: '让 Agent 真正理解你的上下文',
@@ -76,6 +83,39 @@ const text = {
   saveSuccess: '知识文档保存成功。',
   deleteSuccess: '知识文档删除成功。',
   actionFailed: '操作失败，请稍后重试。'
+};
+
+const normalizeMetadata = (metadata: KnowledgeDocument['metadata'] | string | null | undefined): KnowledgeMetadata => {
+  if (!metadata) return {};
+  if (typeof metadata === 'string') {
+    try {
+      const parsed = JSON.parse(metadata);
+      return normalizeMetadata(parsed as KnowledgeDocument['metadata']);
+    } catch (error) {
+      return {};
+    }
+  }
+  if (typeof metadata !== 'object' || Array.isArray(metadata)) return {};
+
+  const rawMetadata = metadata as Record<string, unknown>;
+  const rawTags = rawMetadata.tags;
+  const tags = Array.isArray(rawTags)
+    ? rawTags.map((tag) => String(tag).trim()).filter(Boolean)
+    : typeof rawTags === 'string'
+      ? rawTags.split(/[,，]/).map((tag: string) => tag.trim()).filter(Boolean)
+      : [];
+
+  return {
+    ...metadata,
+    source: typeof rawMetadata.source === 'string' ? rawMetadata.source : '',
+    tags,
+    useCase:
+      typeof rawMetadata.useCase === 'string'
+        ? rawMetadata.useCase
+        : typeof rawMetadata.use_case === 'string'
+          ? rawMetadata.use_case
+          : ''
+  };
 };
 
 const KnowledgeBasePage = () => {
@@ -113,14 +153,15 @@ const KnowledgeBasePage = () => {
   };
 
   const handleOpenEdit = (document: KnowledgeDocument) => {
+    const metadata = normalizeMetadata(document.metadata);
     setEditing(document);
     form.setFieldsValue({
       title: document.title,
       category: document.category,
       content: document.content,
-      metadataSource: document.metadata?.source || '',
-      metadataTags: Array.isArray(document.metadata?.tags) ? document.metadata.tags.join(', ') : '',
-      metadataUseCase: typeof document.metadata?.useCase === 'string' ? document.metadata.useCase : ''
+      metadataSource: metadata.source || '',
+      metadataTags: metadata.tags?.join(', ') || '',
+      metadataUseCase: metadata.useCase || ''
     });
     setOpen(true);
   };
@@ -204,45 +245,47 @@ const KnowledgeBasePage = () => {
       <section className="knowledge-list">
         {groupedDocuments.length === 0 ? <Card className="empty-card">{text.empty}</Card> : null}
 
-        {groupedDocuments.map((document) => (
-          <Card
-            key={document.id}
-            className="knowledge-card"
-            title={
-              <div className="card-title">
-                <span>{document.title}</span>
-                <Tag>{document.category}</Tag>
-                <Tag color="blue">Markdown</Tag>
-              </div>
-            }
-            extra={
-              <Space>
-                <Button type="link" onClick={() => handleOpenEdit(document)}>
-                  {text.edit}
-                </Button>
-                <Popconfirm
-                  title="确定删除这篇知识文档吗？"
-                  okText={text.remove}
-                  cancelText={text.cancel}
-                  onConfirm={() => handleDelete(document.id)}
-                >
-                  <Button type="link" danger>
-                    {text.remove}
+        {groupedDocuments.map((document) => {
+          const metadata = normalizeMetadata(document.metadata);
+
+          return (
+            <Card
+              key={document.id}
+              className="knowledge-card"
+              title={
+                <div className="card-title">
+                  <span>{document.title}</span>
+                  <Tag>{document.category}</Tag>
+                  <Tag color="blue">Markdown</Tag>
+                </div>
+              }
+              extra={
+                <Space>
+                  <Button type="link" onClick={() => handleOpenEdit(document)}>
+                    {text.edit}
                   </Button>
-                </Popconfirm>
-              </Space>
-            }
-          >
-            <div className="knowledge-meta">
-              <span>更新于 {dayjs(document.updated_at).format('YYYY-MM-DD HH:mm')}</span>
-              {document.metadata?.source ? <span>{document.metadata.source}</span> : null}
-              {Array.isArray(document.metadata?.tags)
-                ? document.metadata.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
-                : null}
-            </div>
-            <div className="knowledge-content">{document.content}</div>
-          </Card>
-        ))}
+                  <Popconfirm
+                    title="确定删除这篇知识文档吗？"
+                    okText={text.remove}
+                    cancelText={text.cancel}
+                    onConfirm={() => handleDelete(document.id)}
+                  >
+                    <Button type="link" danger>
+                      {text.remove}
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              }
+            >
+              <div className="knowledge-meta">
+                <span>更新于 {dayjs(document.updated_at).format('YYYY-MM-DD HH:mm')}</span>
+                {metadata.source ? <span>{metadata.source}</span> : null}
+                {metadata.tags?.map((tag) => <Tag key={tag}>{tag}</Tag>)}
+              </div>
+              <div className="knowledge-content">{document.content}</div>
+            </Card>
+          );
+        })}
       </section>
 
       <Modal
