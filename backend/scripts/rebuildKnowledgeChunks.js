@@ -17,7 +17,7 @@ function query(sql, params = []) {
 async function rebuildKnowledgeChunks() {
   await ensureKnowledgeTable();
   const docs = await query(
-    `SELECT id, user_id, title, content, category
+    `SELECT id, user_id, title, content, content_format, metadata, category
      FROM knowledge_document
      ORDER BY id ASC`
   );

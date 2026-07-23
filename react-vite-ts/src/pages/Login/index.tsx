@@ -13,7 +13,7 @@ interface LoginForm {
 }
 
 const loginHighlights = [
-  'AI 摘要帮助你快速提炼任务关键信息',
+  '多 Agent 帮你做决策，知识库帮你做总结  ',
   '\u57fa\u4e8e RBAC \u7684\u89d2\u8272\u6743\u9650\u63a7\u5236\u56e2\u961f\u53ef\u89c1\u8303\u56f4',
   '\u53ef\u89c6\u5316\u8fdb\u5ea6\u4e0e\u622a\u6b62\u63d0\u9192\u5e2e\u52a9\u53ca\u65f6\u8ddf\u8fdb'
 ];

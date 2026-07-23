@@ -71,6 +71,11 @@
     display: flex;
     justify-content: flex-end;
   }
+
+  .markdown-editor {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    line-height: 1.7;
+  }
 }
 
 @media (max-width: 768px) {

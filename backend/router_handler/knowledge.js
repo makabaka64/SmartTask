@@ -19,13 +19,19 @@ exports.getKnowledgeList = async (req, res) => {
 };
 
 exports.createKnowledge = async (req, res) => {
-  const { title, content, category } = req.body;
+  const { title, content, category, content_format, contentFormat, metadata } = req.body;
   if (!title || !content) {
     return res.cc('标题和内容不能为空');
   }
 
   try {
-    const id = await createKnowledgeDocument(req.user.id, { title, content, category });
+    const id = await createKnowledgeDocument(req.user.id, {
+      title,
+      content,
+      category,
+      content_format: content_format || contentFormat,
+      metadata,
+    });
     res.send({
       status: 0,
       message: '知识文档创建成功',
@@ -37,14 +43,20 @@ exports.createKnowledge = async (req, res) => {
 };
 
 exports.updateKnowledge = async (req, res) => {
-  const { title, content, category } = req.body;
+  const { title, content, category, content_format, contentFormat, metadata } = req.body;
   const documentId = Number(req.params.id);
   if (!documentId || !title || !content) {
     return res.cc('参数不完整');
   }
 
   try {
-    const result = await updateKnowledgeDocument(req.user.id, documentId, { title, content, category });
+    const result = await updateKnowledgeDocument(req.user.id, documentId, {
+      title,
+      content,
+      category,
+      content_format: content_format || contentFormat,
+      metadata,
+    });
     if (result.affectedRows !== 1) {
       return res.cc('文档不存在或无权限修改');
     }

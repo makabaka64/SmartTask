@@ -1,6 +1,6 @@
 const { getKnowledgeDocumentsForSearch } = require('./knowledgeDocumentService');
 const { createEmbedding } = require('./embeddingService');
-const { listChunksForSearch } = require('./knowledgeChunkService');
+const { listChunksForSearch, splitKnowledgeToChunks } = require('./knowledgeChunkService');
 
 function tokenize(text) {
   const rawTokens = text.toLowerCase().match(/[a-z0-9_]+|[\u4e00-\u9fa5]+/g) || [];
@@ -19,14 +19,6 @@ function tokenize(text) {
   return [...new Set(expanded)];
 }
 
-function splitToChunks(content) {
-  return content
-    .split(/\n\s*\n/)
-    .map((chunk) => chunk.trim())
-    .filter(Boolean)
-    .map((chunk) => chunk.replace(/\n+/g, ' '));
-}
-
 function scoreChunk(queryTokens, chunk) {
   const tokenSet = new Set(chunk.tokens);
   let score = 0;
@@ -41,6 +33,17 @@ function scoreChunk(queryTokens, chunk) {
   }
 
   return score;
+}
+
+function parseMetadata(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (error) {
+    return {};
+  }
 }
 
 async function searchKnowledge(userId, query, limit = 4) {
@@ -89,6 +92,9 @@ async function searchKnowledgeByVector(userId, query, limit = 4) {
       id: chunk.id,
       source: chunk.source_title,
       category: chunk.category,
+      contentFormat: 'markdown',
+      sectionPath: chunk.section_path || '',
+      metadata: parseMetadata(chunk.metadata),
       content: chunk.content,
       score: cosineSimilarity(queryEmbedding, parseEmbedding(chunk.embedding)),
       retrieval: 'vector',
@@ -105,12 +111,21 @@ async function searchKnowledgeByKeyword(userId, query, limit = 4) {
   if (!queryTokens.length) return [];
 
   const chunks = docs.flatMap((doc) =>
-    splitToChunks(doc.content).map((chunk, index) => ({
+    splitKnowledgeToChunks(doc).map((chunk, index) => ({
       id: `${doc.id}-${index}`,
       source: doc.title,
       category: doc.category,
-      content: chunk,
-      tokens: tokenize(chunk)
+      contentFormat: 'markdown',
+      sectionPath: chunk.sectionPath || '',
+      metadata: parseMetadata(doc.metadata),
+      content: chunk.content,
+      tokens: tokenize([
+        doc.title,
+        doc.category,
+        chunk.sectionPath,
+        Object.values(parseMetadata(doc.metadata)).join(' '),
+        chunk.content,
+      ].join('\n'))
     }))
   );
 
@@ -122,10 +137,13 @@ async function searchKnowledgeByKeyword(userId, query, limit = 4) {
     .filter((chunk) => chunk.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
-    .map(({ id, source, category, content, score }) => ({
+    .map(({ id, source, category, contentFormat, sectionPath, metadata, content, score }) => ({
       id,
       source,
       category,
+      contentFormat,
+      sectionPath,
+      metadata,
       content,
       score,
       retrieval: 'keyword'
@@ -135,7 +153,19 @@ async function searchKnowledgeByKeyword(userId, query, limit = 4) {
 function formatKnowledgeContext(results) {
   if (!results.length) return 'No related knowledge found.';
   return results
-    .map((item, index) => `[${index + 1}] Source: ${item.source} (${item.category})\n${item.content}`)
+    .map((item, index) => {
+      const metadata = Object.entries(item.metadata || {})
+        .filter(([, value]) => value !== undefined && value !== null && String(value).trim())
+        .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+        .join('; ');
+      return [
+        `[${index + 1}] Source: ${item.source} (${item.category})`,
+        item.sectionPath ? `Section: ${item.sectionPath}` : '',
+        item.contentFormat ? `Format: ${item.contentFormat}` : '',
+        metadata ? `Metadata: ${metadata}` : '',
+        item.content,
+      ].filter(Boolean).join('\n');
+    })
     .join('\n\n');
 }
 

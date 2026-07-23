@@ -56,9 +56,9 @@ Agent 工作流包含：
 ### 当前 RAG 流程
 
 ```text
-用户录入知识文档
+用户录入 Markdown 知识文档和元数据
 → 保存到 knowledge_document
-→ 自动切分为 chunk
+→ 按 Markdown 标题层级自动切分为 chunk
 → 调用 Embedding 模型生成向量
 → 保存到 knowledge_chunk
 
@@ -72,8 +72,8 @@ Agent 执行
 
 ### 实现说明
 
-- 文档原文存储在 MySQL 表 `knowledge_document`。
-- 文档 chunk 和向量存储在 MySQL 表 `knowledge_chunk`。
+- 文档原文、Markdown 格式标记和元数据存储在 MySQL 表 `knowledge_document`。
+- 文档 chunk、章节路径、元数据快照和向量存储在 MySQL 表 `knowledge_chunk`。
 - 当前没有单独部署 Qdrant、Milvus 等独立向量数据库。
 - 小规模知识库下，后端在 Node.js 中计算余弦相似度完成 Top-K 检索。
 - 如果没有可用的真实 Embedding 配置，可使用本地 fallback embedding 跑通开发流程。
@@ -121,7 +121,7 @@ cd backend
 npm run rebuild:knowledge
 ```
 
-之后新增或更新知识文档时，会自动重新切 chunk 并生成 embedding。
+之后新增或更新知识文档时，会按 Markdown 章节重新切 chunk，并结合标题、分类、元数据生成 embedding。
 
 ## 技术栈
 
@@ -244,7 +244,7 @@ http://localhost:5173
 ## 本项目的 RAG 部分
 
 
-> 项目实现了一个面向智能任务管理场景的轻量级 RAG 知识库模块。用户录入知识文档后，系统会进行 chunk 切分，并通过阿里百炼 `text-embedding-v3` 生成 1024 维向量存入 MySQL。Agent 执行时，会对用户输入生成 query embedding，通过余弦相似度召回 Top-K 相关知识片段，再注入 DeepSeek 的上下文中生成任务规划、进度总结或周报。考虑到当前知识库规模较小，没有额外引入独立向量数据库；后续数据量扩大时可以迁移到 pgvector、Qdrant 或 Milvus。
+> 项目实现了一个面向智能任务管理场景的轻量级 RAG 知识库模块。用户录入 Markdown 知识文档和来源、标签、适用场景等元数据后，系统会按标题层级进行 chunk 切分，并通过阿里百炼 `text-embedding-v3` 生成 1024 维向量存入 MySQL。Agent 执行时，会对用户输入生成 query embedding，通过余弦相似度召回 Top-K 相关知识片段，再把章节路径和元数据一起注入 DeepSeek 的上下文中生成任务规划、进度总结或周报。考虑到当前知识库规模较小，没有额外引入独立向量数据库；后续数据量扩大时可以迁移到 pgvector、Qdrant 或 Milvus。
 
 ## 项目亮点
 

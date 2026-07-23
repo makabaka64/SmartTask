@@ -19,6 +19,15 @@ const categoryOptions = [
   { label: '通用知识', value: 'general' }
 ];
 
+type KnowledgeFormValues = {
+  title: string;
+  category: string;
+  content: string;
+  metadataSource?: string;
+  metadataTags?: string;
+  metadataUseCase?: string;
+};
+
 const text = {
   badge: '知识库',
   title: '让 Agent 真正理解你的上下文',
@@ -82,18 +91,37 @@ const KnowledgeBasePage = () => {
     form.setFieldsValue({
       title: document.title,
       category: document.category,
-      content: document.content
+      content: document.content,
+      metadataSource: document.metadata?.source || '',
+      metadataTags: Array.isArray(document.metadata?.tags) ? document.metadata.tags.join(', ') : '',
+      metadataUseCase: typeof document.metadata?.useCase === 'string' ? document.metadata.useCase : ''
     });
     setOpen(true);
   };
 
-  const handleSubmit = async (values: { title: string; category: string; content: string }) => {
+  const handleSubmit = async (values: KnowledgeFormValues) => {
+    const payload = {
+      title: values.title,
+      category: values.category,
+      content_format: 'markdown' as const,
+      content: values.content,
+      metadata: {
+        source: values.metadataSource?.trim() || undefined,
+        tags:
+          values.metadataTags
+            ?.split(/[,，]/)
+            .map((tag) => tag.trim())
+            .filter(Boolean) || [],
+        useCase: values.metadataUseCase?.trim() || undefined
+      }
+    };
+
     setSubmitting(true);
     try {
       if (editing) {
-        await updateKnowledge(editing.id, values);
+        await updateKnowledge(editing.id, payload);
       } else {
-        await createKnowledge(values);
+        await createKnowledge(payload);
       }
       alert(text.saveSuccess);
       setOpen(false);
@@ -143,6 +171,7 @@ const KnowledgeBasePage = () => {
               <div className="card-title">
                 <span>{document.title}</span>
                 <Tag>{document.category}</Tag>
+                <Tag color="blue">Markdown</Tag>
               </div>
             }
             extra={
@@ -165,6 +194,10 @@ const KnowledgeBasePage = () => {
           >
             <div className="knowledge-meta">
               <span>更新于 {dayjs(document.updated_at).format('YYYY-MM-DD HH:mm')}</span>
+              {document.metadata?.source ? <span>{document.metadata.source}</span> : null}
+              {Array.isArray(document.metadata?.tags)
+                ? document.metadata.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
+                : null}
             </div>
             <div className="knowledge-content">{document.content}</div>
           </Card>
@@ -198,12 +231,30 @@ const KnowledgeBasePage = () => {
             <Select options={categoryOptions} />
           </Form.Item>
 
+          <Form.Item label="元数据">
+            <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              <Form.Item name="metadataSource" noStyle>
+                <Input placeholder="来源，例如：项目文档 / 会议纪要 / 个人经验" />
+              </Form.Item>
+              <Form.Item name="metadataTags" noStyle>
+                <Input placeholder="标签，多个标签用逗号分隔，例如：周报,前端,规范" />
+              </Form.Item>
+              <Form.Item name="metadataUseCase" noStyle>
+                <Input placeholder="适用场景，例如：生成周报时优先参考" />
+              </Form.Item>
+            </Space>
+          </Form.Item>
+
           <Form.Item
             name="content"
             label={text.contentLabel}
             rules={[{ required: true, message: '请输入内容' }]}
           >
-            <TextArea rows={10} placeholder={text.contentPlaceholder} />
+            <TextArea
+              className="markdown-editor"
+              rows={14}
+              placeholder={text.contentPlaceholder}
+            />
           </Form.Item>
 
           <div className="modal-actions">
