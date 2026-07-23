@@ -15,18 +15,20 @@ exports.streamAgent = async (req, res) => {
     Connection: 'keep-alive'
   });
 
-  const run = createRun({
-    userId: req.user.id,
-    agentType: req.body.agentType,
-    input: req.body.input
-  });
-
-  writeEvent(res, 'run_started', {
-    runId: run.id,
-    startedAt: run.startedAt
-  });
+  let run = null;
 
   try {
+    run = await createRun({
+      userId: req.user.id,
+      agentType: req.body.agentType,
+      input: req.body.input
+    });
+
+    writeEvent(res, 'run_started', {
+      runId: run.id,
+      startedAt: run.startedAt
+    });
+
     const result = await streamAgentRun({
       userId: req.user.id,
       agentType: req.body.agentType,
@@ -34,13 +36,13 @@ exports.streamAgent = async (req, res) => {
       res
     });
 
-    updateRun(run.id, {
+    await updateRun(run.id, {
       status: 'completed',
       completedAt: new Date().toISOString(),
       knowledgeHits: result.knowledgeHits,
       draftCount: result.draftCount,
       summary: result.assistantText.slice(0, 800)
-    });
+    }, req.user.id);
 
     writeEvent(res, 'done', {
       ok: true,
@@ -50,14 +52,16 @@ exports.streamAgent = async (req, res) => {
     res.end();
   } catch (error) {
     console.error('agent stream failed:', error);
-    updateRun(run.id, {
-      status: 'failed',
-      completedAt: new Date().toISOString(),
-      summary: error.message || 'Agent execution failed'
-    });
+    if (run) {
+      await updateRun(run.id, {
+        status: 'failed',
+        completedAt: new Date().toISOString(),
+        summary: error.message || 'Agent execution failed'
+      }, req.user.id);
+    }
     writeEvent(res, 'error', {
       message: error.message || 'Agent 执行失败',
-      runId: run.id
+      runId: run?.id
     });
     res.end();
   }
@@ -90,10 +94,10 @@ exports.confirmDrafts = async (req, res) => {
     }
 
     if (runId) {
-      updateRun(runId, {
+      await updateRun(runId, {
         status: 'confirmed',
         confirmedTaskIds: createdTaskIds
-      });
+      }, userId);
     }
 
     res.send({
@@ -109,9 +113,9 @@ exports.confirmDrafts = async (req, res) => {
   }
 };
 
-exports.getRuns = (req, res) => {
+exports.getRuns = async (req, res) => {
   try {
-    const data = listRuns().filter((run) => run.userId === req.user.id);
+    const data = await listRuns(req.user.id);
     res.send({
       status: 0,
       message: '获取 Agent 运行记录成功',
@@ -122,31 +126,39 @@ exports.getRuns = (req, res) => {
   }
 };
 
-exports.getRunDetail = (req, res) => {
-  const runId = req.params.id;
-  const run = getRun(runId);
+exports.getRunDetail = async (req, res) => {
+  try {
+    const runId = req.params.id;
+    const run = await getRun(runId, req.user.id);
 
-  if (!run || run.userId !== req.user.id) {
-    return res.cc('运行记录不存在或无权限查看');
+    if (!run) {
+      return res.cc('运行记录不存在或无权限查看');
+    }
+
+    res.send({
+      status: 0,
+      message: '获取运行详情成功',
+      data: run
+    });
+  } catch (error) {
+    res.cc(error);
   }
-
-  res.send({
-    status: 0,
-    message: '获取运行详情成功',
-    data: run
-  });
 };
 
-exports.deleteRun = (req, res) => {
-  const runId = req.params.id;
-  const ok = removeRun(runId, req.user.id);
+exports.deleteRun = async (req, res) => {
+  try {
+    const runId = req.params.id;
+    const ok = await removeRun(runId, req.user.id);
 
-  if (!ok) {
-    return res.cc('运行记录不存在或无权限删除');
+    if (!ok) {
+      return res.cc('运行记录不存在或无权限删除');
+    }
+
+    res.send({
+      status: 0,
+      message: '运行记录删除成功'
+    });
+  } catch (error) {
+    res.cc(error);
   }
-
-  res.send({
-    status: 0,
-    message: '运行记录删除成功'
-  });
 };

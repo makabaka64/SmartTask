@@ -161,8 +161,7 @@ npm run rebuild:knowledge
 │   ├── router/              # 路由定义
 │   ├── router_handler/      # 控制器
 │   ├── services/            # 任务、知识库、RAG、Agent 服务
-│   ├── scripts/             # 初始化和知识库回填脚本
-│   └── runtime/             # Agent 运行记录
+│   └── scripts/             # 初始化和知识库回填脚本
 └── react-vite-ts/           # React 前端
     ├── src/pages/           # 页面
     ├── src/apis/            # 接口封装
@@ -195,6 +194,10 @@ CREATE DATABASE smarttask DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_
 
 - `knowledge_document`
 - `knowledge_chunk`
+
+Agent 运行记录表会由后端自动创建：
+
+- `agent_run`
 
 初始化角色与权限：
 
@@ -242,7 +245,6 @@ http://localhost:5173
 ```
 
 ## 本项目的 RAG 部分
-
 
 > 项目实现了一个面向智能任务管理场景的轻量级 RAG 知识库模块。用户录入 Markdown 知识文档和来源、标签、适用场景等元数据后，系统会按标题层级进行 chunk 切分，并通过阿里百炼 `text-embedding-v3` 生成 1024 维向量存入 MySQL。Agent 执行时，会对用户输入生成 query embedding，通过余弦相似度召回 Top-K 相关知识片段，再把章节路径和元数据一起注入 DeepSeek 的上下文中生成任务规划、进度总结或周报。考虑到当前知识库规模较小，没有额外引入独立向量数据库；后续数据量扩大时可以迁移到 pgvector、Qdrant 或 Milvus。
 
