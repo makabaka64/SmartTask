@@ -16,6 +16,14 @@ exports.streamAgent = async (req, res) => {
   });
 
   let run = null;
+  let responseFinished = false;
+  const abortController = new AbortController();
+
+  res.on('close', () => {
+    if (!responseFinished) {
+      abortController.abort();
+    }
+  });
 
   try {
     run = await createRun({
@@ -33,8 +41,13 @@ exports.streamAgent = async (req, res) => {
       userId: req.user.id,
       agentType: req.body.agentType,
       input: req.body.input,
-      res
+      res,
+      abortSignal: abortController.signal
     });
+
+    if (abortController.signal.aborted) {
+      throw Object.assign(new Error('Agent stream aborted'), { name: 'AbortError' });
+    }
 
     await updateRun(run.id, {
       status: 'completed',
@@ -49,8 +62,25 @@ exports.streamAgent = async (req, res) => {
       runId: run.id,
       draftCount: result.draftCount
     });
+    responseFinished = true;
     res.end();
   } catch (error) {
+    if (error.name === 'AbortError' || abortController.signal.aborted) {
+      console.warn('agent stream cancelled by client:', run?.id);
+      if (run) {
+        await updateRun(run.id, {
+          status: 'cancelled',
+          completedAt: new Date().toISOString(),
+          summary: 'Agent execution cancelled by client'
+        }, req.user.id);
+      }
+      responseFinished = true;
+      if (!res.destroyed && !res.writableEnded) {
+        res.end();
+      }
+      return;
+    }
+
     console.error('agent stream failed:', error);
     if (run) {
       await updateRun(run.id, {
@@ -63,6 +93,7 @@ exports.streamAgent = async (req, res) => {
       message: error.message || 'Agent 执行失败',
       runId: run?.id
     });
+    responseFinished = true;
     res.end();
   }
 };

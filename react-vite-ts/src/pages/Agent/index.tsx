@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Drawer, Input, Popconfirm, Segmented, Space, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { useDispatch } from 'react-redux';
@@ -15,6 +15,7 @@ import {
 import './index.scss';
 
 const { TextArea } = Input;
+const STREAM_FLUSH_INTERVAL = 80;
 
 const agentOptions: { label: string; value: AgentType }[] = [
   { label: '任务拆解', value: 'task_planner' },
@@ -78,6 +79,10 @@ const AgentPage = () => {
   const [currentRunId, setCurrentRunId] = useState<string>();
   const [isRunning, setIsRunning] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const assistantChunkBufferRef = useRef('');
+  const assistantFlushTimerRef = useRef<number | null>(null);
+  const streamAbortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   const latestDraftMessage = useMemo(
     () => [...messages].reverse().find((item) => item.role === 'draft' && item.status !== 'confirmed'),
@@ -102,19 +107,52 @@ const AgentPage = () => {
 
   useEffect(() => {
     loadRuns();
+
+    return () => {
+      isMountedRef.current = false;
+      streamAbortControllerRef.current?.abort();
+      streamAbortControllerRef.current = null;
+      if (assistantFlushTimerRef.current) {
+        window.clearTimeout(assistantFlushTimerRef.current);
+      }
+      assistantFlushTimerRef.current = null;
+      assistantChunkBufferRef.current = '';
+    };
   }, []);
 
-  const appendAssistantChunk = (chunk: string) => {
+  const appendAssistantText = (content: string) => {
+    if (!content) return;
     setMessages((prev) => {
       const last = prev[prev.length - 1];
       if (last?.role === 'assistant' && last.status === 'pending') {
-        return [...prev.slice(0, -1), { ...last, content: last.content + chunk }];
+        return [...prev.slice(0, -1), { ...last, content: last.content + content }];
       }
-      return [...prev, createMessage('assistant', chunk, { status: 'pending', runId: currentRunId })];
+      return [...prev, createMessage('assistant', content, { status: 'pending', runId: currentRunId })];
     });
   };
 
+  const flushAssistantBuffer = () => {
+    if (assistantFlushTimerRef.current) {
+      window.clearTimeout(assistantFlushTimerRef.current);
+      assistantFlushTimerRef.current = null;
+    }
+
+    const content = assistantChunkBufferRef.current;
+    assistantChunkBufferRef.current = '';
+    appendAssistantText(content);
+  };
+
+  const appendAssistantChunk = (chunk: string) => {
+    assistantChunkBufferRef.current += chunk;
+    if (assistantFlushTimerRef.current) return;
+
+    assistantFlushTimerRef.current = window.setTimeout(() => {
+      flushAssistantBuffer();
+    }, STREAM_FLUSH_INTERVAL);
+  };
+
   const finalizeAssistantMessage = () => {
+    flushAssistantBuffer();
     setMessages((prev) => {
       const next = [...prev];
       const lastIndex = next.map((item) => item.role).lastIndexOf('assistant');
@@ -127,50 +165,68 @@ const AgentPage = () => {
 
   const handleRun = async () => {
     if (!input.trim() || isRunning) return;
+    streamAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    streamAbortControllerRef.current = abortController;
     setIsRunning(true);
     setCurrentRunId(undefined);
+    assistantChunkBufferRef.current = '';
     setMessages((prev) => [...prev, createMessage('user', input)]);
 
     try {
-      await streamAgentRun(agentType, input, {
-        run_started: ({ runId }) => {
-          setCurrentRunId(runId);
-          setMessages((prev) => [...prev, createMessage('system', `本次运行 ID：${runId}`, { runId })]);
+      await streamAgentRun(
+        agentType,
+        input,
+        {
+          run_started: ({ runId }) => {
+            setCurrentRunId(runId);
+            setMessages((prev) => [...prev, createMessage('system', `本次运行 ID：${runId}`, { runId })]);
+          },
+          message: ({ chunk }) => appendAssistantChunk(chunk),
+          tool_start: ({ message }) =>
+            setMessages((prev) => [...prev, createMessage('tool', `开始执行：${message}`, { runId: currentRunId })]),
+          tool_result: ({ message }) =>
+            setMessages((prev) => [...prev, createMessage('tool', `执行结果：${message}`, { runId: currentRunId })]),
+          knowledge_hits: ({ hits }) =>
+            setMessages((prev) => [
+              ...prev,
+              createMessage('system', `命中 ${hits.length} 条知识片段`, {
+                runId: currentRunId,
+                knowledgeHits: hits
+              })
+            ]),
+          draft: ({ drafts }) =>
+            setMessages((prev) => [
+              ...prev,
+              createMessage('draft', '已生成任务草案，请确认后写入任务系统。', {
+                drafts,
+                status: 'ready',
+                runId: currentRunId
+              })
+            ]),
+          need_confirm: ({ message }) =>
+            setMessages((prev) => [...prev, createMessage('system', message, { runId: currentRunId })]),
+          error: ({ message, runId }) =>
+            setMessages((prev) => [...prev, createMessage('error', message, { runId })]),
+          done: () => finalizeAssistantMessage()
         },
-        message: ({ chunk }) => appendAssistantChunk(chunk),
-        tool_start: ({ message }) =>
-          setMessages((prev) => [...prev, createMessage('tool', `开始执行：${message}`, { runId: currentRunId })]),
-        tool_result: ({ message }) =>
-          setMessages((prev) => [...prev, createMessage('tool', `执行结果：${message}`, { runId: currentRunId })]),
-        knowledge_hits: ({ hits }) =>
-          setMessages((prev) => [
-            ...prev,
-            createMessage('system', `命中 ${hits.length} 条知识片段`, {
-              runId: currentRunId,
-              knowledgeHits: hits
-            })
-          ]),
-        draft: ({ drafts }) =>
-          setMessages((prev) => [
-            ...prev,
-            createMessage('draft', '已生成任务草案，请确认后写入任务系统。', {
-              drafts,
-              status: 'ready',
-              runId: currentRunId
-            })
-          ]),
-        need_confirm: ({ message }) =>
-          setMessages((prev) => [...prev, createMessage('system', message, { runId: currentRunId })]),
-        error: ({ message, runId }) =>
-          setMessages((prev) => [...prev, createMessage('error', message, { runId })]),
-        done: () => finalizeAssistantMessage()
-      });
+        { signal: abortController.signal }
+      );
     } catch (error) {
+      flushAssistantBuffer();
+      if (abortController.signal.aborted) return;
       console.error(error);
       setMessages((prev) => [...prev, createMessage('error', 'Agent 执行失败，请检查服务或重试。')]);
     } finally {
-      setIsRunning(false);
-      loadRuns();
+      flushAssistantBuffer();
+      const isCurrentStream = streamAbortControllerRef.current === abortController;
+      if (isCurrentStream) {
+        streamAbortControllerRef.current = null;
+      }
+      if (isMountedRef.current && isCurrentStream) {
+        setIsRunning(false);
+        loadRuns();
+      }
     }
   };
 

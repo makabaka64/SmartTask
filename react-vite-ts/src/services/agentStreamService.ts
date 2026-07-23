@@ -5,6 +5,10 @@ type EventHandlers = {
   [K in keyof AgentStreamEventMap]?: (payload: AgentStreamEventMap[K]) => void;
 };
 
+type StreamAgentRunOptions = {
+  signal?: AbortSignal;
+};
+
 function parseSSEChunk(buffer: string, emit: (event: string, data: string) => void) {
   const parts = buffer.split('\n\n');
   const complete = parts.slice(0, -1);
@@ -34,7 +38,8 @@ function parseSSEChunk(buffer: string, emit: (event: string, data: string) => vo
 export async function streamAgentRun(
   agentType: AgentType,
   input: string,
-  handlers: EventHandlers
+  handlers: EventHandlers,
+  options: StreamAgentRunOptions = {}
 ) {
   const response = await fetch('http://localhost:3001/agent/stream', {
     method: 'POST',
@@ -43,7 +48,8 @@ export async function streamAgentRun(
       Authorization: getToken() || ''
     },
     credentials: 'include',
-    body: JSON.stringify({ agentType, input })
+    body: JSON.stringify({ agentType, input }),
+    signal: options.signal
   });
 
   if (!response.ok || !response.body) {

@@ -21,7 +21,7 @@ export interface AgentRunLog {
   userId: number;
   agentType: AgentType;
   input: string;
-  status: 'running' | 'completed' | 'failed' | 'confirmed';
+  status: 'running' | 'completed' | 'failed' | 'confirmed' | 'cancelled';
   startedAt: string;
   completedAt: string | null;
   knowledgeHits: AgentKnowledgeHit[];

@@ -53,8 +53,16 @@ const TASK_PLANNER_TOOLS = [
 ];
 
 function writeEvent(res, event, data) {
+  if (res.destroyed || res.writableEnded) return;
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function throwIfAborted(abortSignal) {
+  if (!abortSignal?.aborted) return;
+  const error = new Error("Agent stream aborted");
+  error.name = "AbortError";
+  throw error;
 }
 
 function buildTaskContext(tasks) {
@@ -75,21 +83,26 @@ function safeParseJson(raw, fallback = {}) {
   }
 }
 
-async function streamTextResponse({ messages, systemPrompt, userPrompt, res }) {
+async function streamTextResponse({ messages, systemPrompt, userPrompt, res, abortSignal }) {
+  throwIfAborted(abortSignal);
   const requestMessages =
     messages ||
     [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ];
-  const stream = await openai.chat.completions.create({
-    model: "deepseek-v4-flash",
-    messages: requestMessages,
-    stream: true,
-  });
+  const stream = await openai.chat.completions.create(
+    {
+      model: "deepseek-v4-flash",
+      messages: requestMessages,
+      stream: true,
+    },
+    { signal: abortSignal },
+  );
 
   let fullText = "";
   for await (const chunk of stream) {
+    throwIfAborted(abortSignal);
     const delta = chunk.choices?.[0]?.delta?.content;
     if (!delta) continue;
     fullText += delta;
@@ -98,22 +111,26 @@ async function streamTextResponse({ messages, systemPrompt, userPrompt, res }) {
   return fullText;
 }
 
-async function generateTaskDrafts({ input, tasks }) {
-  const response = await openai.chat.completions.create({
-    model: "deepseek-v4-flash",
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are a task planning assistant. Return JSON only. Create 3 to 6 actionable tasks. Each task must include name, description, priority(high|medium|low), startOffsetDays, durationDays, and risk.",
-      },
-      {
-        role: "user",
-        content: `User goal:\n${input}\n\nExisting tasks:\n${buildTaskContext(tasks) || "No existing tasks."}\n\nReturn valid JSON with shape {"tasks":[...]}. Avoid markdown.`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
+async function generateTaskDrafts({ input, tasks, abortSignal }) {
+  throwIfAborted(abortSignal);
+  const response = await openai.chat.completions.create(
+    {
+      model: "deepseek-v4-flash",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a task planning assistant. Return JSON only. Create 3 to 6 actionable tasks. Each task must include name, description, priority(high|medium|low), startOffsetDays, durationDays, and risk.",
+        },
+        {
+          role: "user",
+          content: `User goal:\n${input}\n\nExisting tasks:\n${buildTaskContext(tasks) || "No existing tasks."}\n\nReturn valid JSON with shape {"tasks":[...]}. Avoid markdown.`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    },
+    { signal: abortSignal },
+  );
 
   const content = response.choices?.[0]?.message?.content || '{"tasks":[]}';
   const parsed = JSON.parse(content);
@@ -160,7 +177,9 @@ async function executeTaskPlannerTool({
   input,
   res,
   state,
+  abortSignal,
 }) {
+  throwIfAborted(abortSignal);
   const args = safeParseJson(toolCall.function.arguments, {});
 
   switch (toolCall.function.name) {
@@ -169,7 +188,9 @@ async function executeTaskPlannerTool({
         tool: "get_user_tasks",
         message: "模型正在读取当前用户任务上下文",
       });
+      throwIfAborted(abortSignal);
       const tasks = await getUserTasks(userId);
+      throwIfAborted(abortSignal);
       const stats = summarizeTasks(tasks);
       state.tasks = tasks;
       state.stats = stats;
@@ -198,7 +219,9 @@ async function executeTaskPlannerTool({
         tool: "search_knowledge",
         message: `模型正在检索相关知识：${query}`,
       });
+      throwIfAborted(abortSignal);
       const knowledgeResults = await searchKnowledge(userId, query, limit);
+      throwIfAborted(abortSignal);
       state.knowledgeHits = knowledgeResults;
       emitKnowledgeEvents(
         res,
@@ -239,7 +262,9 @@ async function executeAgentTool({
   input,
   res,
   state,
+  abortSignal,
 }) {
+  throwIfAborted(abortSignal);
   const toolName = toolCall.function.name;
 
   if (toolName === "get_user_tasks" || toolName === "search_knowledge") {
@@ -249,6 +274,7 @@ async function executeAgentTool({
       input,
       res,
       state,
+      abortSignal,
     });
   }
 
@@ -264,6 +290,7 @@ async function resolveAgentToolCalls({
   systemPrompt,
   userPrompt,
   maxRounds = 4,
+  abortSignal,
 }) {
   const state = {
     tasks: [],
@@ -284,12 +311,16 @@ async function resolveAgentToolCalls({
   ];
 
   for (let round = 0; round < maxRounds; round += 1) {
-    const completion = await openai.chat.completions.create({
-      model: "deepseek-v4-flash",
-      messages,
-      tools: TASK_PLANNER_TOOLS,
-      tool_choice: "auto",
-    });
+    throwIfAborted(abortSignal);
+    const completion = await openai.chat.completions.create(
+      {
+        model: "deepseek-v4-flash",
+        messages,
+        tools: TASK_PLANNER_TOOLS,
+        tool_choice: "auto",
+      },
+      { signal: abortSignal },
+    );
 
     const message = completion.choices?.[0]?.message;
     if (!message) break;
@@ -308,6 +339,7 @@ async function resolveAgentToolCalls({
         input,
         res,
         state,
+        abortSignal,
       });
 
       messages.push({
@@ -331,6 +363,7 @@ async function resolveAgentToolCalls({
       input,
       res,
       state,
+      abortSignal,
     });
     messages.push({
       role: "tool",
@@ -348,6 +381,7 @@ async function resolveAgentToolCalls({
       input,
       res,
       state,
+      abortSignal,
     });
     messages.push({
       role: "tool",
@@ -364,7 +398,7 @@ async function resolveAgentToolCalls({
   };
 }
 
-async function runTaskPlanner({ userId, input, res }) {
+async function runTaskPlanner({ userId, input, res, abortSignal }) {
   const { messages, tasks, knowledgeHits } =
     await resolveAgentToolCalls({
       userId,
@@ -373,6 +407,7 @@ async function runTaskPlanner({ userId, input, res }) {
       systemPrompt:
         "You are an execution-oriented task planning agent. Before answering, always call get_user_tasks. If the goal may benefit from personal notes, project docs, or review constraints, call search_knowledge. After enough context is collected, stop calling tools.",
       userPrompt: `用户目标：${input}\n请先通过工具收集足够上下文，再给出简洁中文说明。`,
+      abortSignal,
     });
   const knowledgeContext = formatKnowledgeContext(knowledgeHits);
 
@@ -386,12 +421,15 @@ async function runTaskPlanner({ userId, input, res }) {
       },
     ],
     res,
+    abortSignal,
   });
 
   const drafts = await generateTaskDrafts({
     input: `${input}\n\n参考知识：\n${knowledgeContext}`,
     tasks,
+    abortSignal,
   });
+  throwIfAborted(abortSignal);
   writeEvent(res, "draft", { drafts });
   writeEvent(res, "need_confirm", {
     message: "已生成任务草案，确认后将写入任务系统。",
@@ -404,7 +442,7 @@ async function runTaskPlanner({ userId, input, res }) {
   };
 }
 
-async function runProgressSummary({ userId, input, res }) {
+async function runProgressSummary({ userId, input, res, abortSignal }) {
   const goal = input || "任务进展总结";
   const { messages, knowledgeHits } = await resolveAgentToolCalls({
     userId,
@@ -413,6 +451,7 @@ async function runProgressSummary({ userId, input, res }) {
     systemPrompt:
       "You are a project progress assistant. Always call get_user_tasks first to understand the current workload. If relevant project context, norms, or reporting constraints may help, call search_knowledge. Stop calling tools after you have enough context to summarize progress.",
     userPrompt: `补充说明：${goal}\n请先通过工具收集任务与知识上下文，再输出中文进展总结。`,
+    abortSignal,
   });
 
   const assistantText = await streamTextResponse({
@@ -425,6 +464,7 @@ async function runProgressSummary({ userId, input, res }) {
       },
     ],
     res,
+    abortSignal,
   });
 
   return {
@@ -434,7 +474,7 @@ async function runProgressSummary({ userId, input, res }) {
   };
 }
 
-async function runWeeklyReport({ userId, input, res }) {
+async function runWeeklyReport({ userId, input, res, abortSignal }) {
   const goal = input || "周报输出规范";
   const { messages, knowledgeHits } = await resolveAgentToolCalls({
     userId,
@@ -443,6 +483,7 @@ async function runWeeklyReport({ userId, input, res }) {
     systemPrompt:
       "You are a weekly report assistant. Always call get_user_tasks first. If reporting templates, project context, or delivery norms may help, call search_knowledge. Stop calling tools after you have enough context to prepare the weekly report.",
     userPrompt: `额外要求：${goal}\n请先通过工具收集周报所需上下文，再输出中文周报。`,
+    abortSignal,
   });
 
   const assistantText = await streamTextResponse({
@@ -455,6 +496,7 @@ async function runWeeklyReport({ userId, input, res }) {
       },
     ],
     res,
+    abortSignal,
   });
 
   return {
@@ -464,19 +506,20 @@ async function runWeeklyReport({ userId, input, res }) {
   };
 }
 
-async function streamAgentRun({ userId, agentType, input, res }) {
+async function streamAgentRun({ userId, agentType, input, res, abortSignal }) {
   if (!input) {
     throw new Error("input is required");
   }
+  throwIfAborted(abortSignal);
 
   switch (agentType) {
     case AGENT_TYPES.PROGRESS_SUMMARY:
-      return runProgressSummary({ userId, input, res });
+      return runProgressSummary({ userId, input, res, abortSignal });
     case AGENT_TYPES.WEEKLY_REPORT:
-      return runWeeklyReport({ userId, input, res });
+      return runWeeklyReport({ userId, input, res, abortSignal });
     case AGENT_TYPES.TASK_PLANNER:
     default:
-      return runTaskPlanner({ userId, input, res });
+      return runTaskPlanner({ userId, input, res, abortSignal });
   }
 }
 
