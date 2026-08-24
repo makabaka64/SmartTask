@@ -59,6 +59,12 @@ module.exports = {
     useLocalFallback: booleanEnv('EMBEDDING_LOCAL_FALLBACK', true),
   },
 
+  rerank: {
+    enabled: booleanEnv('RERANK_ENABLED', true),
+    model: process.env.RERANK_MODEL || process.env.OPENAI_MODEL || 'deepseek-v4-flash',
+    candidateLimit: numberEnv('RERANK_CANDIDATE_LIMIT', 20),
+  },
+
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'root',

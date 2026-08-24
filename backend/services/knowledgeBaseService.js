@@ -1,6 +1,8 @@
 const { getKnowledgeDocumentsForSearch } = require('./knowledgeDocumentService');
 const { createEmbedding } = require('./embeddingService');
 const { listChunksForSearch, splitKnowledgeToChunks } = require('./knowledgeChunkService');
+const { rerankKnowledge } = require('./rerankService');
+const config = require('../config');
 
 function tokenize(text) {
   const rawTokens = text.toLowerCase().match(/[a-z0-9_]+|[\u4e00-\u9fa5]+/g) || [];
@@ -47,10 +49,65 @@ function parseMetadata(raw) {
 }
 
 async function searchKnowledge(userId, query, limit = 4) {
-  const vectorResults = await searchKnowledgeByVector(userId, query, limit);
-  if (vectorResults.length) return vectorResults;
+  const candidateLimit = Math.max(limit, config.rerank.candidateLimit || 20);
+  const [vectorResults, keywordResults] = await Promise.all([
+    searchKnowledgeByVector(userId, query, candidateLimit),
+    searchKnowledgeByKeyword(userId, query, candidateLimit),
+  ]);
+
+  const candidates = mergeKnowledgeCandidates([
+    ...vectorResults,
+    ...keywordResults,
+  ]);
+
+  if (candidates.length) {
+    const reranked = await rerankKnowledge(query, candidates);
+    return reranked.slice(0, limit).map((item) => ({
+      ...item,
+      score: Number(Number(item.score).toFixed(4)),
+    }));
+  }
 
   return searchKnowledgeByKeyword(userId, query, limit);
+}
+
+function getCandidateKey(candidate) {
+  return [
+    candidate.source,
+    candidate.category,
+    candidate.sectionPath || '',
+    String(candidate.content || '').slice(0, 120),
+  ].join('|');
+}
+
+function mergeKnowledgeCandidates(candidates) {
+  const byKey = new Map();
+
+  for (const [index, candidate] of candidates.entries()) {
+    const key = getCandidateKey(candidate);
+    const existing = byKey.get(key);
+    const enriched = {
+      ...candidate,
+      originalRank: candidate.originalRank ?? index + 1,
+      originalScore: candidate.originalScore ?? candidate.score,
+    };
+
+    if (!existing) {
+      byKey.set(key, enriched);
+      continue;
+    }
+
+    const retrievals = new Set(String(existing.retrieval || '').split('+').filter(Boolean));
+    retrievals.add(candidate.retrieval);
+    byKey.set(key, {
+      ...existing,
+      score: Math.max(Number(existing.score) || 0, Number(candidate.score) || 0),
+      originalScore: Math.max(Number(existing.originalScore) || 0, Number(candidate.score) || 0),
+      retrieval: [...retrievals].join('+') || existing.retrieval,
+    });
+  }
+
+  return [...byKey.values()];
 }
 
 function cosineSimilarity(a, b) {
