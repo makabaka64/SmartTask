@@ -3,6 +3,7 @@ const { createEmbedding } = require('./embeddingService');
 const { listChunksForSearch, splitKnowledgeToChunks } = require('./knowledgeChunkService');
 const { rerankKnowledge } = require('./rerankService');
 const config = require('../config');
+const { searchKnowledgeVectors } = require('./vectorStoreService');
 
 function tokenize(text) {
   const rawTokens = text.toLowerCase().match(/[a-z0-9_]+|[\u4e00-\u9fa5]+/g) || [];
@@ -139,10 +140,12 @@ function parseEmbedding(raw) {
 }
 
 async function searchKnowledgeByVector(userId, query, limit = 4) {
+  const queryEmbedding = await createEmbedding(query);
+  const vectorStoreResults = await searchKnowledgeVectors(userId, queryEmbedding, limit);
+  if (vectorStoreResults.length) return vectorStoreResults;
+
   const chunks = await listChunksForSearch(userId);
   if (!chunks.length) return [];
-
-  const queryEmbedding = await createEmbedding(query);
 
   return chunks
     .map((chunk) => ({

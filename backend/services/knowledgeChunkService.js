@@ -3,6 +3,10 @@ const {
   createEmbeddings,
   getEmbeddingModelName,
 } = require('./embeddingService');
+const {
+  upsertKnowledgeVectors,
+  deleteKnowledgeVectors,
+} = require('./vectorStoreService');
 
 let schemaReady = false;
 
@@ -196,6 +200,7 @@ function buildEmbeddingInput(document, chunk) {
 
 async function deleteChunksByDocument(userId, documentId) {
   await ensureKnowledgeChunkTable();
+  await deleteKnowledgeVectors(userId, documentId);
   return query(
     'DELETE FROM knowledge_chunk WHERE user_id = ? AND document_id = ?',
     [userId, documentId]
@@ -212,9 +217,11 @@ async function syncChunksForDocument(userId, document) {
   const embeddings = await createEmbeddings(chunks.map((chunk) => buildEmbeddingInput(document, chunk)));
   const embeddingModel = getEmbeddingModelName();
   const metadata = JSON.stringify(normalizeMetadata(document.metadata));
+  const metadataPayload = normalizeMetadata(document.metadata);
+  const insertedChunks = [];
 
   for (const [index, chunk] of chunks.entries()) {
-    await query(
+    const result = await query(
       `INSERT INTO knowledge_chunk
        (document_id, user_id, source_title, category, content_format, section_path, metadata, chunk_index, content, embedding, embedding_model)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -232,7 +239,22 @@ async function syncChunksForDocument(userId, document) {
         embeddingModel,
       ]
     );
+    insertedChunks.push({
+      id: result.insertId,
+      documentId: document.id,
+      userId,
+      sourceTitle: document.title,
+      category: document.category || 'general',
+      contentFormat: 'markdown',
+      sectionPath: chunk.sectionPath || '',
+      metadata: metadataPayload,
+      chunkIndex: index,
+      content: chunk.content,
+      embeddingModel,
+    });
   }
+
+  await upsertKnowledgeVectors(insertedChunks, embeddings);
 
   return chunks.length;
 }

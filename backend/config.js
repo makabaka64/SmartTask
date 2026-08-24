@@ -65,6 +65,14 @@ module.exports = {
     candidateLimit: numberEnv('RERANK_CANDIDATE_LIMIT', 20),
   },
 
+  vectorStore: {
+    enabled: booleanEnv('VECTOR_STORE_ENABLED', false),
+    provider: process.env.VECTOR_STORE_PROVIDER || 'qdrant',
+    url: process.env.QDRANT_URL || '',
+    apiKey: process.env.QDRANT_API_KEY || '',
+    collection: process.env.QDRANT_COLLECTION || 'knowledge_chunks',
+  },
+
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'root',

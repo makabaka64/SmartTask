@@ -49,9 +49,9 @@ Agent 工作流包含：
 - 用户确认后批量写入任务系统。
 - 保存最近运行记录，支持查看详情和删除。
 
-## 轻量级 RAG 知识库
+## RAG 知识库
 
-项目已接入轻量级 RAG 流程，用于让 Agent 在任务规划、进度总结和周报生成前检索用户私有知识。
+项目已接入面向个人知识库场景的 RAG 流程，用于让 Agent 在任务规划、进度总结和周报生成前检索用户私有知识。当前实现包含 Markdown chunk 切分、Embedding 生成、Qdrant 向量检索、关键词召回、混合召回去重、rerank 重排和 Agent 上下文注入。
 
 ### 当前 RAG 流程
 
@@ -60,12 +60,16 @@ Agent 工作流包含：
 → 保存到 knowledge_document
 → 按 Markdown 标题层级自动切分为 chunk
 → 调用 Embedding 模型生成向量
-→ 保存到 knowledge_chunk
+→ 保存到 MySQL knowledge_chunk
+→ 同步 upsert 到 Qdrant collection
 
 Agent 执行
 → 用户输入生成 query embedding
-→ 与 knowledge_chunk 中的 chunk embedding 计算余弦相似度
-→ 召回 Top-K 相关知识片段
+→ Qdrant 向量召回候选片段
+→ 关键词召回候选片段
+→ 合并去重形成候选集
+→ rerank 对候选片段按相关性重排
+→ 截取 Top-K 相关知识片段
 → 注入 Agent 上下文
 → DeepSeek 生成任务规划、进度总结或周报
 ```
@@ -73,19 +77,23 @@ Agent 执行
 ### 实现说明
 
 - 文档原文、Markdown 格式标记和元数据存储在 MySQL 表 `knowledge_document`。
-- 文档 chunk、章节路径、元数据快照和向量存储在 MySQL 表 `knowledge_chunk`。
-- 当前没有单独部署 Qdrant、Milvus 等独立向量数据库。
-- 小规模知识库下，后端在 Node.js 中计算余弦相似度完成 Top-K 检索。
+- 文档 chunk、章节路径、元数据快照和向量仍存储在 MySQL 表 `knowledge_chunk`，作为业务数据和降级检索来源。
+- Qdrant 作为独立向量数据库，负责低延迟 Top-K 向量检索，并通过 payload 中的 `user_id` 做用户级过滤。
+- 检索阶段采用 hybrid retrieval：Qdrant 向量召回和关键词召回并行执行，再合并去重。
+- 重排阶段通过 `rerankService` 对候选片段二次评分；rerank 模型不可用时自动回退到本地启发式重排。
+- 如果 Qdrant 未配置或访问失败，系统会回退到 MySQL 中的 embedding 暴力余弦相似度检索，保证开发和演示流程可用。
 - 如果没有可用的真实 Embedding 配置，可使用本地 fallback embedding 跑通开发流程。
-- 如果知识库扩大到十万级 chunk 或需要低延迟检索，可迁移到 `pgvector`、`Qdrant` 或 `Milvus`。
+- 当前 RAG 更适合个人或中小规模知识库；如果要达到企业级生产 RAG，还需要补充系统化评测集、召回率指标、答案忠实性检测、上下文压缩和更完善的可观测性。
 
 ### 相关后端模块
 
 - `backend/services/embeddingService.js`：生成 embedding，支持 OpenAI 兼容接口和本地 fallback。
-- `backend/services/knowledgeChunkService.js`：负责文档切块、chunk 表创建、向量入库和查询。
-- `backend/services/knowledgeBaseService.js`：负责 query embedding、余弦相似度检索、Top-K 返回。
+- `backend/services/vectorStoreService.js`：负责 Qdrant collection 创建、向量 upsert、删除同步和向量检索。
+- `backend/services/rerankService.js`：负责候选知识片段 rerank，并提供本地启发式降级。
+- `backend/services/knowledgeChunkService.js`：负责文档切块、chunk 表创建、MySQL 入库和 Qdrant 同步。
+- `backend/services/knowledgeBaseService.js`：负责 hybrid retrieval、候选合并、rerank 和 Top-K 返回。
 - `backend/services/knowledgeDocumentService.js`：负责知识文档增删改查，并同步维护 chunk。
-- `backend/scripts/rebuildKnowledgeChunks.js`：用于回填历史知识文档的 chunk 和 embedding。
+- `backend/scripts/rebuildKnowledgeChunks.js`：用于回填历史知识文档的 chunk、embedding 和 Qdrant 向量索引。
 
 ### Embedding 配置
 
@@ -101,6 +109,16 @@ EMBEDDING_MODEL=text-embedding-v3
 EMBEDDING_DIMENSIONS=1024
 EMBEDDING_PROXY_URL=
 EMBEDDING_LOCAL_FALLBACK=false
+
+VECTOR_STORE_ENABLED=true
+VECTOR_STORE_PROVIDER=qdrant
+QDRANT_URL=https://你的 Qdrant Cloud 集群地址
+QDRANT_API_KEY=你的 Qdrant API Key
+QDRANT_COLLECTION=knowledge_chunks
+
+RERANK_ENABLED=true
+RERANK_MODEL=deepseek-v4-flash
+RERANK_CANDIDATE_LIMIT=20
 ```
 
 如果暂时没有真实 Embedding Key，可以使用开发 fallback：
@@ -121,7 +139,7 @@ cd backend
 npm run rebuild:knowledge
 ```
 
-之后新增或更新知识文档时，会按 Markdown 章节重新切 chunk，并结合标题、分类、元数据生成 embedding。
+之后新增或更新知识文档时，会按 Markdown 章节重新切 chunk，并结合标题、分类、元数据生成 embedding，同时同步写入 Qdrant。
 
 ## 技术栈
 
@@ -246,12 +264,12 @@ http://localhost:5173
 
 ## 本项目的 RAG 部分
 
-> 项目实现了一个面向智能任务管理场景的轻量级 RAG 知识库模块。用户录入 Markdown 知识文档和来源、标签、适用场景等元数据后，系统会按标题层级进行 chunk 切分，并通过阿里百炼 `text-embedding-v3` 生成 1024 维向量存入 MySQL。Agent 执行时，会对用户输入生成 query embedding，通过余弦相似度召回 Top-K 相关知识片段，再把章节路径和元数据一起注入 DeepSeek 的上下文中生成任务规划、进度总结或周报。考虑到当前知识库规模较小，没有额外引入独立向量数据库；后续数据量扩大时可以迁移到 pgvector、Qdrant 或 Milvus。
+> 项目实现了一个面向智能任务管理场景的 RAG 知识库模块。用户录入 Markdown 知识文档和来源、标签、适用场景等元数据后，系统会按标题层级进行 chunk 切分，并通过阿里百炼 `text-embedding-v3` 生成 1024 维向量。chunk 原文和向量快照保存在 MySQL 中，同时同步到 Qdrant 向量数据库。Agent 执行时，会对用户输入生成 query embedding，通过 Qdrant 向量召回和关键词召回形成候选集，再经过 rerank 重排选出 Top-K 相关知识片段，最后将章节路径、元数据和片段内容注入 DeepSeek 上下文，用于生成任务规划、进度总结或周报。当前实现已经覆盖 RAG 的核心链路，但仍定位为中小规模个人知识库 RAG，企业级生产场景还需要补充系统化评测、答案忠实性校验、监控和权限审计。
 
 ## 项目亮点
 
 - 不是单纯 Todo 应用，而是整合了任务管理、协作权限、通知、AI Agent、RAG 知识库和数据看板。
 - Agent 支持“生成任务草稿 -> 人工确认 -> 写回任务系统”的闭环。
-- 知识库已从关键词检索升级为基于 Embedding 的轻量级 RAG。
-- RAG 支持真实 Embedding 接口和本地 fallback，方便开发和演示。
+- 知识库已从关键词检索升级为 Qdrant 向量检索、关键词召回和 rerank 结合的 RAG。
+- RAG 支持真实 Embedding 接口、Qdrant 向量数据库和本地 fallback，方便开发和演示。
 - 任务摘要和 Agent 结果均支持流式输出，交互体验更完整。
