@@ -1,5 +1,8 @@
 const db = require('../db/index');
-const { ensureKnowledgeTable } = require('../services/knowledgeDocumentService');
+const {
+  buildContentHash,
+  ensureKnowledgeTable,
+} = require('../services/knowledgeDocumentService');
 const { syncChunksForDocument } = require('../services/knowledgeChunkService');
 
 function query(sql, params = []) {
@@ -24,6 +27,11 @@ async function rebuildKnowledgeChunks() {
 
   let chunkCount = 0;
   for (const doc of docs) {
+    await query('UPDATE knowledge_document SET content_hash = ? WHERE id = ? AND user_id = ?', [
+      buildContentHash(doc),
+      doc.id,
+      doc.user_id,
+    ]);
     chunkCount += await syncChunksForDocument(doc.user_id, doc);
   }
 

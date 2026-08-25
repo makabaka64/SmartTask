@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const db = require('../db/index');
 const {
   syncChunksForDocument,
@@ -27,6 +28,7 @@ async function ensureKnowledgeTable() {
       user_id INT NOT NULL,
       title VARCHAR(120) NOT NULL,
       content TEXT NOT NULL,
+      content_hash CHAR(64) NULL,
       content_format VARCHAR(30) DEFAULT 'markdown',
       metadata TEXT NULL,
       category VARCHAR(40) DEFAULT 'general',
@@ -34,6 +36,10 @@ async function ensureKnowledgeTable() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
+  await addColumnIfMissing(
+    'content_hash',
+    'ALTER TABLE knowledge_document ADD COLUMN content_hash CHAR(64) NULL AFTER content'
+  );
   await addColumnIfMissing(
     'content_format',
     "ALTER TABLE knowledge_document ADD COLUMN content_format VARCHAR(30) DEFAULT 'markdown' AFTER content"
@@ -73,10 +79,40 @@ function serializeMetadata(metadata) {
   return JSON.stringify(normalizeMetadata(metadata));
 }
 
+function stableStringify(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+      .join(',')}}`;
+  }
+
+  return JSON.stringify(value);
+}
+
+function buildContentHash(document) {
+  const hashInput = {
+    title: document.title,
+    content: document.content,
+    content_format: document.content_format,
+    category: document.category,
+    metadata: normalizeMetadata(document.metadata),
+  };
+
+  return crypto
+    .createHash('sha256')
+    .update(stableStringify(hashInput))
+    .digest('hex');
+}
+
 async function listKnowledgeDocuments(userId) {
   await ensureKnowledgeTable();
   return query(
-    `SELECT id, user_id, title, content, content_format, metadata, category, created_at, updated_at
+    `SELECT id, user_id, title, content, content_hash, content_format, metadata, category, created_at, updated_at
      FROM knowledge_document
      WHERE user_id = ?
      ORDER BY updated_at DESC, id DESC`,
@@ -87,13 +123,15 @@ async function listKnowledgeDocuments(userId) {
 async function createKnowledgeDocument(userId, payload) {
   await ensureKnowledgeTable();
   const document = normalizeDocumentPayload(payload);
+  const contentHash = buildContentHash(document);
   const result = await query(
-    `INSERT INTO knowledge_document (user_id, title, content, content_format, metadata, category)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO knowledge_document (user_id, title, content, content_hash, content_format, metadata, category)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       document.title,
       document.content,
+      contentHash,
       document.content_format,
       serializeMetadata(document.metadata),
       document.category,
@@ -109,13 +147,24 @@ async function createKnowledgeDocument(userId, payload) {
 async function updateKnowledgeDocument(userId, documentId, payload) {
   await ensureKnowledgeTable();
   const document = normalizeDocumentPayload(payload);
+  const contentHash = buildContentHash(document);
+  const existingRows = await query(
+    'SELECT id, content_hash FROM knowledge_document WHERE id = ? AND user_id = ?',
+    [documentId, userId]
+  );
+
+  if (!existingRows.length) {
+    return { affectedRows: 0, chunksSynced: false, hashChanged: false };
+  }
+
   const result = await query(
     `UPDATE knowledge_document
-     SET title = ?, content = ?, content_format = ?, metadata = ?, category = ?
+     SET title = ?, content = ?, content_hash = ?, content_format = ?, metadata = ?, category = ?
      WHERE id = ? AND user_id = ?`,
     [
       document.title,
       document.content,
+      contentHash,
       document.content_format,
       serializeMetadata(document.metadata),
       document.category,
@@ -123,13 +172,21 @@ async function updateKnowledgeDocument(userId, documentId, payload) {
       userId,
     ]
   );
-  if (result.affectedRows === 1) {
+
+  const hashChanged = existingRows[0].content_hash !== contentHash;
+  if (hashChanged) {
     await syncChunksForDocument(userId, {
       id: documentId,
       ...document,
     });
   }
-  return result;
+
+  return {
+    ...result,
+    affectedRows: 1,
+    chunksSynced: hashChanged,
+    hashChanged,
+  };
 }
 
 async function deleteKnowledgeDocument(userId, documentId) {
@@ -141,7 +198,7 @@ async function deleteKnowledgeDocument(userId, documentId) {
 async function getKnowledgeDocumentsForSearch(userId) {
   await ensureKnowledgeTable();
   return query(
-    `SELECT id, title, content, content_format, metadata, category, updated_at
+    `SELECT id, title, content, content_hash, content_format, metadata, category, updated_at
      FROM knowledge_document
      WHERE user_id = ?`,
     [userId]
@@ -168,6 +225,7 @@ function hydrateDocument(row) {
 
 module.exports = {
   ensureKnowledgeTable,
+  buildContentHash,
   listKnowledgeDocuments,
   createKnowledgeDocument,
   updateKnowledgeDocument,
