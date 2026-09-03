@@ -26,6 +26,17 @@ function requiredEnv(name) {
   return value;
 }
 
+function deriveDashScopeRerankBaseURL(baseURL) {
+  const value = String(baseURL || '').replace(/\/$/, '');
+  if (!value) return '';
+
+  if (value.includes('/compatible-mode/v1')) {
+    return value.replace('/compatible-mode/v1', '/compatible-api/v1');
+  }
+
+  return value;
+}
+
 module.exports = {
   jwtSecretKey: requiredEnv('JWT_SECRET_KEY'),
   accessTokenExpiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '1h',
@@ -61,8 +72,14 @@ module.exports = {
 
   rerank: {
     enabled: booleanEnv('RERANK_ENABLED', true),
-    model: process.env.RERANK_MODEL || process.env.OPENAI_MODEL || 'deepseek-v4-flash',
+    provider: process.env.RERANK_PROVIDER || 'dashscope',
+    apiKey: process.env.RERANK_API_KEY || process.env.EMBEDDING_API_KEY || process.env.OPENAI_API_KEY,
+    baseURL:
+      process.env.RERANK_BASE_URL ||
+      deriveDashScopeRerankBaseURL(process.env.EMBEDDING_BASE_URL || process.env.OPENAI_BASE_URL),
+    model: process.env.RERANK_MODEL || 'qwen3-rerank',
     candidateLimit: numberEnv('RERANK_CANDIDATE_LIMIT', 20),
+    proxyURL: process.env.RERANK_PROXY_URL || process.env.EMBEDDING_PROXY_URL || '',
   },
 
   vectorStore: {

@@ -26,4 +26,4 @@ Notes:
 - The current default eval set is intentionally aligned with the existing local knowledge base, which contains one weekly report template document split into five chunks.
 - The result verifies that the RAG pipeline can retrieve the expected source and section from Qdrant and keyword retrieval.
 - This result should not be described as a broad production benchmark. For a stronger benchmark, add more documents and expand the eval set to cover different categories, ambiguous queries, exact keyword queries, and negative cases.
-- During the latest run, LLM-based rerank fell back to local heuristic rerank because the rerank model request failed. The fallback is expected behavior and keeps evaluation available when the model call is unavailable.
+- During the latest run, rerank used Alibaba Bailian `qwen3-rerank`; result rows returned `qwen3-rerank relevance score`. Local heuristic rerank remains as a fallback when the rerank API is unavailable.

@@ -114,7 +114,7 @@ Agent 执行
 - 文档 chunk、章节路径、元数据快照和向量仍存储在 MySQL 表 `knowledge_chunk`，作为业务数据和降级检索来源。
 - Qdrant 作为独立向量数据库，负责低延迟 Top-K 向量检索，并通过 payload 中的 `user_id` 做用户级过滤。
 - 检索阶段采用 hybrid retrieval：Qdrant 向量召回和关键词召回并行执行，再合并去重。
-- 重排阶段通过 `rerankService` 对候选片段二次评分；rerank 模型不可用时自动回退到本地启发式重排。
+- 重排阶段通过 `rerankService` 调用百炼 `qwen3-rerank` 对候选片段二次排序；rerank 服务不可用时自动回退到本地启发式重排。
 - 如果 Qdrant 未配置或访问失败，系统会回退到 MySQL 中的 embedding 暴力余弦相似度检索，保证开发和演示流程可用。
 - 如果没有可用的真实 Embedding 配置，可使用本地 fallback embedding 跑通开发流程。
 - 当前 RAG 更适合个人或中小规模知识库；如果要达到企业级生产 RAG，还需要补充系统化评测集、召回率指标、答案忠实性检测、上下文压缩和更完善的可观测性。
@@ -131,7 +131,7 @@ Agent 执行
 
 ### Embedding 配置
 
-聊天生成使用 DeepSeek，Embedding 使用阿里百炼 OpenAI 兼容接口。配置位于 `backend/.env`：
+聊天生成使用 DeepSeek，Embedding 使用阿里百炼 OpenAI 兼容接口，Rerank 使用百炼 `qwen3-rerank`。配置位于 `backend/.env`：
 
 ```env
 OPENAI_API_KEY=你的 DeepSeek Key
@@ -151,9 +151,15 @@ QDRANT_API_KEY=你的 Qdrant API Key
 QDRANT_COLLECTION=knowledge_chunks
 
 RERANK_ENABLED=true
-RERANK_MODEL=deepseek-v4-flash
+RERANK_PROVIDER=dashscope
+RERANK_API_KEY=
+RERANK_BASE_URL=
+RERANK_MODEL=qwen3-rerank
 RERANK_CANDIDATE_LIMIT=20
+RERANK_PROXY_URL=
 ```
+
+`RERANK_API_KEY` 留空时会复用 `EMBEDDING_API_KEY`；`RERANK_BASE_URL` 留空时会基于 `EMBEDDING_BASE_URL` 自动推导到百炼 rerank 接口地址。
 
 如果暂时没有真实 Embedding Key，可以使用开发 fallback：
 
@@ -222,6 +228,7 @@ npm run eval:rag -- --user-id 1 --top-k 5 --candidate-limit 20
 - OpenAI SDK
 - DeepSeek Chat API
 - 阿里百炼 Embedding API
+- 阿里百炼 qwen3-rerank API
 
 ## 目录结构
 
@@ -320,7 +327,7 @@ http://localhost:5173
 
 ## 本项目的 RAG 部分
 
-> 项目实现了一个面向智能任务管理场景的 RAG 知识库模块。用户录入 Markdown 知识文档和来源、标签、适用场景等元数据后，系统会按标题层级进行 chunk 切分，并通过阿里百炼 `text-embedding-v3` 生成 1024 维向量。chunk 原文和向量快照保存在 MySQL 中，同时同步到 Qdrant 向量数据库。Agent 执行时，会对用户输入生成 query embedding，通过 Qdrant 向量召回和关键词召回形成候选集，再经过 rerank 重排选出 Top-K 相关知识片段，最后将章节路径、元数据和片段内容注入 DeepSeek 上下文，用于生成任务规划、进度总结或周报。当前实现已经覆盖 RAG 的核心链路，但仍定位为中小规模个人知识库 RAG，企业级生产场景还需要补充系统化评测、答案忠实性校验、监控和权限审计。
+> 项目实现了一个面向智能任务管理场景的 RAG 知识库模块。用户录入 Markdown 知识文档和来源、标签、适用场景等元数据后，系统会按标题层级进行 chunk 切分，并通过阿里百炼 `text-embedding-v3` 生成 1024 维向量。chunk 原文和向量快照保存在 MySQL 中，同时同步到 Qdrant 向量数据库。Agent 执行时，会对用户输入生成 query embedding，通过 Qdrant 向量召回和关键词召回形成候选集，再经过百炼 `qwen3-rerank` 重排选出 Top-K 相关知识片段，最后将章节路径、元数据和片段内容注入 DeepSeek 上下文，用于生成任务规划、进度总结或周报。当前实现已经覆盖 RAG 的核心链路，但仍定位为中小规模个人知识库 RAG，企业级生产场景还需要补充系统化评测、答案忠实性校验、监控和权限审计。
 
 ## 项目亮点
 

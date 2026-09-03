@@ -1,5 +1,7 @@
 const config = require('../config');
 const { openai } = require('../openai');
+const fetch = require('node-fetch');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 function tokenize(text) {
   const rawTokens = String(text || '').toLowerCase().match(/[a-z0-9_]+|[\u4e00-\u9fa5]+/g) || [];
@@ -40,6 +42,12 @@ function normalizeScore(score) {
   return Math.max(0, Math.min(100, numeric));
 }
 
+function normalizeProviderScore(score) {
+  const numeric = Number(score);
+  if (!Number.isFinite(numeric)) return 0;
+  return normalizeScore(numeric <= 1 ? numeric * 100 : numeric);
+}
+
 function parseJsonObject(raw) {
   if (!raw) return null;
   try {
@@ -53,6 +61,31 @@ function parseJsonObject(raw) {
       return null;
     }
   }
+}
+
+function buildRerankDocument(candidate) {
+  return [
+    candidate.source ? `source: ${candidate.source}` : '',
+    candidate.category ? `category: ${candidate.category}` : '',
+    candidate.sectionPath ? `section: ${candidate.sectionPath}` : '',
+    candidate.metadata ? `metadata: ${JSON.stringify(candidate.metadata)}` : '',
+    `content: ${String(candidate.content || '').slice(0, 4000)}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+function extractDashScopeRerankItems(responseBody) {
+  if (Array.isArray(responseBody?.results)) return responseBody.results;
+  if (Array.isArray(responseBody?.output?.results)) return responseBody.output.results;
+  if (Array.isArray(responseBody?.data)) return responseBody.data;
+  return [];
+}
+
+function getRerankItemIndex(item) {
+  const index = item?.index ?? item?.document_index ?? item?.doc_index;
+  const numeric = Number(index);
+  return Number.isInteger(numeric) ? numeric : -1;
 }
 
 function localRerankKnowledge(query, candidates) {
@@ -80,6 +113,76 @@ function localRerankKnowledge(query, candidates) {
         rerankReason: 'local heuristic rerank',
         originalRank: candidate.originalRank ?? index + 1,
         originalScore: candidate.originalScore ?? retrievalScore,
+      };
+    })
+    .sort((a, b) => b.rerankScore - a.rerankScore);
+}
+
+async function dashScopeRerankKnowledge(query, candidates) {
+  const { apiKey, baseURL, model, proxyURL } = config.rerank;
+  if (!apiKey) {
+    throw new Error('RERANK_API_KEY or EMBEDDING_API_KEY is required for DashScope rerank');
+  }
+  if (!baseURL) {
+    throw new Error('RERANK_BASE_URL or EMBEDDING_BASE_URL is required for DashScope rerank');
+  }
+
+  const response = await fetch(`${baseURL.replace(/\/$/, '')}/reranks`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      query: String(query || ''),
+      documents: candidates.map(buildRerankDocument),
+      top_n: candidates.length,
+      return_documents: false,
+    }),
+    agent: proxyURL ? new HttpsProxyAgent(proxyURL) : undefined,
+  });
+
+  const bodyText = await response.text();
+  let body = null;
+  try {
+    body = bodyText ? JSON.parse(bodyText) : null;
+  } catch (error) {
+    body = null;
+  }
+
+  if (!response.ok) {
+    const message = body?.message || body?.error?.message || bodyText || response.statusText;
+    throw new Error(`DashScope rerank failed: ${response.status} ${message}`);
+  }
+
+  const scoreByIndex = new Map();
+  for (const item of extractDashScopeRerankItems(body)) {
+    const index = getRerankItemIndex(item);
+    if (index < 0 || index >= candidates.length) continue;
+    scoreByIndex.set(index, {
+      score: normalizeProviderScore(item.relevance_score ?? item.score),
+      reason: 'qwen3-rerank relevance score',
+    });
+  }
+
+  if (!scoreByIndex.size) {
+    throw new Error('DashScope rerank returned no scored results');
+  }
+
+  return candidates
+    .map((candidate, index) => {
+      const rerank = scoreByIndex.get(index);
+      const fallbackScore = localRerankKnowledge(query, [candidate])[0].score;
+      const rerankScore = rerank ? rerank.score : fallbackScore;
+
+      return {
+        ...candidate,
+        score: Number(rerankScore.toFixed(4)),
+        rerankScore,
+        rerankReason: rerank?.reason || 'local fallback score for missing rerank item',
+        originalRank: candidate.originalRank ?? index + 1,
+        originalScore: candidate.originalScore ?? candidate.score,
       };
     })
     .sort((a, b) => b.rerankScore - a.rerankScore);
@@ -150,7 +253,15 @@ async function rerankKnowledge(query, candidates) {
   }
 
   try {
-    return await llmRerankKnowledge(query, candidates);
+    if (config.rerank.provider === 'dashscope') {
+      return await dashScopeRerankKnowledge(query, candidates);
+    }
+
+    if (config.rerank.provider === 'llm') {
+      return await llmRerankKnowledge(query, candidates);
+    }
+
+    return localRerankKnowledge(query, candidates);
   } catch (error) {
     console.warn('knowledge rerank fallback:', error.message);
     return localRerankKnowledge(query, candidates);
@@ -160,4 +271,5 @@ async function rerankKnowledge(query, candidates) {
 module.exports = {
   rerankKnowledge,
   localRerankKnowledge,
+  dashScopeRerankKnowledge,
 };
