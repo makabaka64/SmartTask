@@ -11,6 +11,9 @@ const AGENT_TYPES = {
   WEEKLY_REPORT: "weekly_report",
 };
 
+const MODEL_CALL_TIMEOUT_MS = 60 * 1000;
+const TOOL_CALL_TIMEOUT_MS = 15 * 1000;
+
 const TASK_PLANNER_TOOLS = [
   {
     type: "function",
@@ -66,6 +69,62 @@ function throwIfAborted(abortSignal) {
   const error = new Error("Agent stream aborted");
   error.name = "AbortError";
   throw error;
+}
+
+function createTimeoutSignal(parentSignal, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    const error = new Error(`Operation timed out after ${timeoutMs}ms`);
+    error.name = "TimeoutError";
+    controller.abort(error);
+  }, timeoutMs);
+
+  const abortFromParent = () => {
+    controller.abort(parentSignal.reason);
+  };
+  if (parentSignal?.aborted) {
+    abortFromParent();
+  } else if (parentSignal) {
+    parentSignal.addEventListener("abort", abortFromParent, { once: true });
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timer);
+      parentSignal?.removeEventListener?.("abort", abortFromParent);
+    },
+  };
+}
+
+async function withTimeout(promiseFactory, timeoutMs, label, abortSignal) {
+  throwIfAborted(abortSignal);
+  const timeout = createTimeoutSignal(abortSignal, timeoutMs);
+  try {
+    return await Promise.race([
+      promiseFactory(timeout.signal),
+      new Promise((_, reject) => {
+        timeout.signal.addEventListener(
+          "abort",
+          () => {
+            const error = new Error(`${label} timed out`);
+            error.name = abortSignal?.aborted ? "AbortError" : "TimeoutError";
+            reject(error);
+          },
+          { once: true },
+        );
+      }),
+    ]);
+  } catch (error) {
+    if (timeout.signal.aborted && !abortSignal?.aborted) {
+      const timeoutError = new Error(`${label} timed out`);
+      timeoutError.name = "TimeoutError";
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    timeout.cleanup();
+  }
 }
 
 function buildTaskContext(tasks) {
@@ -134,13 +193,19 @@ async function streamTextResponse({ messages, systemPrompt, userPrompt, res, abo
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ];
-  const stream = await openai.chat.completions.create(
-    {
-      model: "deepseek-v4-flash",
-      messages: requestMessages,
-      stream: true,
-    },
-    { signal: abortSignal },
+  const stream = await withTimeout(
+    (signal) =>
+      openai.chat.completions.create(
+        {
+          model: "deepseek-v4-flash",
+          messages: requestMessages,
+          stream: true,
+        },
+        { signal },
+      ),
+    MODEL_CALL_TIMEOUT_MS,
+    "stream model response",
+    abortSignal,
   );
 
   let fullText = "";
@@ -156,23 +221,29 @@ async function streamTextResponse({ messages, systemPrompt, userPrompt, res, abo
 
 async function generateTaskDrafts({ input, tasks, abortSignal }) {
   throwIfAborted(abortSignal);
-  const response = await openai.chat.completions.create(
-    {
-      model: "deepseek-v4-flash",
-      messages: [
+  const response = await withTimeout(
+    (signal) =>
+      openai.chat.completions.create(
         {
-          role: "system",
-          content:
-            "You are a task planning assistant. Return JSON only. Create 3 to 6 actionable tasks. Each task must include name, description, priority(high|medium|low), startOffsetDays, durationDays, and risk.",
+          model: "deepseek-v4-flash",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a task planning assistant. Return JSON only. Create 3 to 6 actionable tasks. Each task must include name, description, priority(high|medium|low), startOffsetDays, durationDays, and risk.",
+            },
+            {
+              role: "user",
+              content: `User goal:\n${input}\n\nExisting tasks:\n${buildTaskContext(tasks) || "No existing tasks."}\n\nReturn valid JSON with shape {"tasks":[...]}. Avoid markdown.`,
+            },
+          ],
+          response_format: { type: "json_object" },
         },
-        {
-          role: "user",
-          content: `User goal:\n${input}\n\nExisting tasks:\n${buildTaskContext(tasks) || "No existing tasks."}\n\nReturn valid JSON with shape {"tasks":[...]}. Avoid markdown.`,
-        },
-      ],
-      response_format: { type: "json_object" },
-    },
-    { signal: abortSignal },
+        { signal },
+      ),
+    MODEL_CALL_TIMEOUT_MS,
+    "generate task drafts",
+    abortSignal,
   );
 
   const content = response.choices?.[0]?.message?.content || '{"tasks":[]}';
@@ -217,7 +288,12 @@ async function executeTaskPlannerTool({
         message: "模型正在读取当前用户任务上下文",
       });
       throwIfAborted(abortSignal);
-      const tasks = await getUserTasks(userId);
+      const tasks = await withTimeout(
+        () => getUserTasks(userId),
+        TOOL_CALL_TIMEOUT_MS,
+        "get_user_tasks",
+        abortSignal,
+      );
       throwIfAborted(abortSignal);
       const stats = summarizeTasks(tasks);
       state.tasks = tasks;
@@ -248,7 +324,12 @@ async function executeTaskPlannerTool({
         message: `模型正在检索相关知识：${query}`,
       });
       throwIfAborted(abortSignal);
-      const knowledgeResults = await searchKnowledge(userId, query, limit);
+      const knowledgeResults = await withTimeout(
+        () => searchKnowledge(userId, query, limit),
+        TOOL_CALL_TIMEOUT_MS,
+        "search_knowledge",
+        abortSignal,
+      );
       throwIfAborted(abortSignal);
       state.knowledgeHits = knowledgeResults;
       state.knowledgeHitCount += knowledgeResults.length;
@@ -343,14 +424,20 @@ async function resolveAgentToolCalls({
 
   for (let round = 0; round < maxRounds; round += 1) {
     throwIfAborted(abortSignal);
-    const completion = await openai.chat.completions.create(
-      {
-        model: "deepseek-v4-flash",
-        messages,
-        tools: TASK_PLANNER_TOOLS,
-        tool_choice: "auto",
-      },
-      { signal: abortSignal },
+    const completion = await withTimeout(
+      (signal) =>
+        openai.chat.completions.create(
+          {
+            model: "deepseek-v4-flash",
+            messages,
+            tools: TASK_PLANNER_TOOLS,
+            tool_choice: "auto",
+          },
+          { signal },
+        ),
+      MODEL_CALL_TIMEOUT_MS,
+      "tool calling model response",
+      abortSignal,
     );
 
     const message = completion.choices?.[0]?.message;

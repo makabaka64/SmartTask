@@ -79,7 +79,9 @@ flowchart TD
 
 Runtime 执行过程采用 ReAct-like tool calling：模型先根据当前目标判断是否调用工具，后端执行 `get_user_tasks` 或 `search_knowledge`，再把工具结果作为 `tool` message 回填给模型，最后基于收集到的任务和知识上下文生成回答。任务创建采用 human-in-the-loop 方式，Agent 只生成草稿，用户确认后才写入任务表。
 
-SSE 事件包括 `run_started`、`tool_start`、`tool_result`、`knowledge_hits`、`message`、`draft`、`need_confirm`、`done` 和 `error`。前端根据 event name 分发到对应 handler，用于展示运行 ID、工具调用过程、知识命中、任务草稿和最终状态。后端会持久化除流式 `message` token 外的关键事件，并在 run 上记录 `durationMs`、`toolCallCount`、`knowledgeHitCount` 和 `fallbackCount` 等运行指标，便于历史回看和失败排查。
+SSE 事件包括 `run_started`、`tool_start`、`tool_result`、`knowledge_hits`、`message`、`draft`、`need_confirm`、`done` 和 `error`。前端根据 event name 分发到对应 handler，用于展示运行 ID、工具调用过程、知识命中、任务草稿和最终状态。后端会持久化除流式 `message` token 外的关键事件，并在 run 上记录 `durationMs`、`toolCallCount`、`knowledgeHitCount` 和 `fallbackCount` 等运行指标，运行详情页可查看 metrics 与 event trace，便于历史回看和失败排查。
+
+Runtime 还包含基础稳定性保护：Agent 输入空值和长度校验、`agentType` 白名单归一化、模型与工具调用超时、用户级调用限流、任务草稿字段校验以及重复确认保护。
 
 ## RAG 知识库
 

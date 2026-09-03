@@ -52,7 +52,10 @@ const text = {
   summary: '结果摘要',
   input: '输入内容',
   knowledge: '命中知识',
-  confirmedTasks: '创建任务 ID'
+  confirmedTasks: '创建任务 ID',
+  metrics: '运行指标',
+  events: '执行事件',
+  noEvents: '暂无事件记录'
 };
 
 function createMessage(role: AgentMessage['role'], content: string, extra?: Partial<AgentMessage>): AgentMessage {
@@ -66,6 +69,26 @@ function createMessage(role: AgentMessage['role'], content: string, extra?: Part
 
 function getAgentTypeLabel(type: AgentType) {
   return agentOptions.find((item) => item.value === type)?.label || type;
+}
+
+function formatDuration(durationMs?: number | null) {
+  if (!durationMs) return '-';
+  if (durationMs < 1000) return `${durationMs}ms`;
+  return `${(durationMs / 1000).toFixed(1)}s`;
+}
+
+function formatEventPayload(payload: Record<string, unknown>) {
+  const entries = Object.entries(payload || {}).filter(([, value]) => value !== undefined && value !== null);
+  if (!entries.length) return '';
+
+  return entries
+    .slice(0, 4)
+    .map(([key, value]) => {
+      if (Array.isArray(value)) return `${key}: ${value.length} items`;
+      if (typeof value === 'object') return `${key}: ${JSON.stringify(value).slice(0, 80)}`;
+      return `${key}: ${String(value).slice(0, 80)}`;
+    })
+    .join(' | ');
 }
 
 const AgentPage = () => {
@@ -435,6 +458,28 @@ const AgentPage = () => {
             </div>
 
             <div className="detail-block">
+              <div className="detail-label">{text.metrics}</div>
+              <div className="metric-grid">
+                <div className="metric-item">
+                  <span>耗时</span>
+                  <strong>{formatDuration(selectedRun.durationMs)}</strong>
+                </div>
+                <div className="metric-item">
+                  <span>工具调用</span>
+                  <strong>{selectedRun.toolCallCount ?? 0}</strong>
+                </div>
+                <div className="metric-item">
+                  <span>知识命中</span>
+                  <strong>{selectedRun.knowledgeHitCount ?? selectedRun.knowledgeHits?.length ?? 0}</strong>
+                </div>
+                <div className="metric-item">
+                  <span>降级次数</span>
+                  <strong>{selectedRun.fallbackCount ?? 0}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="detail-block">
               <div className="detail-label">{text.knowledge}</div>
               <div className="detail-list">
                 {selectedRun.knowledgeHits?.length ? (
@@ -457,6 +502,27 @@ const AgentPage = () => {
               <div className="detail-label">{text.confirmedTasks}</div>
               <div className="detail-content">
                 {selectedRun.confirmedTaskIds?.length ? selectedRun.confirmedTaskIds.join(', ') : '无'}
+              </div>
+            </div>
+
+            <div className="detail-block">
+              <div className="detail-label">{text.events}</div>
+              <div className="event-list">
+                {selectedRun.events?.length ? (
+                  selectedRun.events.map((event) => (
+                    <article key={event.id} className="event-card">
+                      <div className="event-head">
+                        <strong>{event.eventType}</strong>
+                        <span>{dayjs(event.createdAt).format('MM-DD HH:mm:ss')}</span>
+                      </div>
+                      {formatEventPayload(event.payload) ? (
+                        <div className="event-payload">{formatEventPayload(event.payload)}</div>
+                      ) : null}
+                    </article>
+                  ))
+                ) : (
+                  <div className="detail-content">{text.noEvents}</div>
+                )}
               </div>
             </div>
           </div>

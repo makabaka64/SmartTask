@@ -12,6 +12,9 @@ const {
 
 const MAX_AGENT_INPUT_LENGTH = 4000;
 const MAX_DRAFTS_PER_CONFIRM = 6;
+const AGENT_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const AGENT_RATE_LIMIT_MAX = 5;
+const agentRateLimitBuckets = new Map();
 
 function normalizeAgentInput(input) {
   return String(input || '').trim();
@@ -67,6 +70,21 @@ function durationSince(startedAt) {
   return Number.isFinite(start) ? Date.now() - start : null;
 }
 
+function checkAgentRateLimit(userId) {
+  const now = Date.now();
+  const bucket = agentRateLimitBuckets.get(userId) || [];
+  const recent = bucket.filter((timestamp) => now - timestamp < AGENT_RATE_LIMIT_WINDOW_MS);
+
+  if (recent.length >= AGENT_RATE_LIMIT_MAX) {
+    agentRateLimitBuckets.set(userId, recent);
+    return false;
+  }
+
+  recent.push(now);
+  agentRateLimitBuckets.set(userId, recent);
+  return true;
+}
+
 exports.streamAgent = async (req, res) => {
   res.set({
     'Content-Type': 'text/event-stream',
@@ -95,6 +113,11 @@ exports.streamAgent = async (req, res) => {
     }
     if (input.length > MAX_AGENT_INPUT_LENGTH) {
       writeEvent(res, 'error', { message: `Agent 输入不能超过 ${MAX_AGENT_INPUT_LENGTH} 个字符` });
+      responseFinished = true;
+      return res.end();
+    }
+    if (!checkAgentRateLimit(req.user.id)) {
+      writeEvent(res, 'error', { message: 'Agent 请求过于频繁，请稍后再试' });
       responseFinished = true;
       return res.end();
     }
