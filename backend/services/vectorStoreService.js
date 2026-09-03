@@ -3,6 +3,7 @@ const config = require('../config');
 
 let client = null;
 let ensuredCollection = null;
+let ensuredPayloadIndexes = null;
 
 function isVectorStoreEnabled() {
   return Boolean(
@@ -42,8 +43,34 @@ async function ensureCollection(vectorSize) {
     });
   }
 
+  await ensurePayloadIndexes();
   ensuredCollection = collectionKey;
   return true;
+}
+
+async function ensurePayloadIndexes() {
+  const indexKey = config.vectorStore.collection;
+  if (ensuredPayloadIndexes === indexKey) return;
+
+  const qdrant = getClient();
+  const collection = await qdrant.getCollection(config.vectorStore.collection);
+  const payloadSchema = collection.payload_schema || {};
+
+  const indexFields = [
+    { fieldName: 'user_id', fieldSchema: 'integer' },
+    { fieldName: 'document_id', fieldSchema: 'integer' },
+  ];
+
+  for (const { fieldName, fieldSchema } of indexFields) {
+    if (payloadSchema[fieldName]) continue;
+    await qdrant.createPayloadIndex(config.vectorStore.collection, {
+      wait: true,
+      field_name: fieldName,
+      field_schema: fieldSchema,
+    });
+  }
+
+  ensuredPayloadIndexes = indexKey;
 }
 
 function toPoint(chunk, embedding) {

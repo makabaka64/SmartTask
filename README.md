@@ -49,6 +49,38 @@ Agent 工作流包含：
 - 用户确认后批量写入任务系统。
 - 保存最近运行记录，支持查看详情和删除。
 
+### Agent Runtime 设计
+
+项目后端实现了一个轻量 Agent Runtime，将一次 Agent 请求抽象为一次 `run`，统一管理 Agent 类型分发、工具调用、RAG 检索、SSE 事件流、草稿确认和运行记录持久化。
+
+```mermaid
+flowchart TD
+  A[User Input] --> B[Agent Router]
+  B --> C[Create Runtime Run]
+  C --> D[Tool Calling Loop]
+  D --> E[get_user_tasks Tool]
+  D --> F[search_knowledge Tool]
+  F --> G[RAG Retrieval]
+  G --> H[Qdrant Vector Search]
+  G --> I[Keyword Search]
+  H --> J[Merge + Rerank]
+  I --> J
+  J --> D
+  D --> K[Stream Model Output]
+  K --> L[SSE Event Stream]
+  L --> M[Frontend Runtime Console]
+  K --> N[Generate Draft Tasks]
+  N --> O[Human Confirmation]
+  O --> P[Write Tasks]
+  C --> Q[Run Log Persistence]
+  K --> Q
+  O --> Q
+```
+
+Runtime 执行过程采用 ReAct-like tool calling：模型先根据当前目标判断是否调用工具，后端执行 `get_user_tasks` 或 `search_knowledge`，再把工具结果作为 `tool` message 回填给模型，最后基于收集到的任务和知识上下文生成回答。任务创建采用 human-in-the-loop 方式，Agent 只生成草稿，用户确认后才写入任务表。
+
+SSE 事件包括 `run_started`、`tool_start`、`tool_result`、`knowledge_hits`、`message`、`draft`、`need_confirm`、`done` 和 `error`。前端根据 event name 分发到对应 handler，用于展示运行 ID、工具调用过程、知识命中、任务草稿和最终状态。
+
 ## RAG 知识库
 
 项目已接入面向个人知识库场景的 RAG 流程，用于让 Agent 在任务规划、进度总结和周报生成前检索用户私有知识。当前实现包含 Markdown chunk 切分、Embedding 生成、Qdrant 向量检索、关键词召回、混合召回去重、rerank 重排和 Agent 上下文注入。
@@ -140,6 +172,27 @@ npm run rebuild:knowledge
 ```
 
 之后新增或更新知识文档时，会按 Markdown 章节重新切 chunk，并结合标题、分类、元数据生成 embedding，同时同步写入 Qdrant。
+
+### RAG 检索评测
+
+项目提供了一个轻量评测脚本，用于检查知识库检索准确性和 rerank 前后的排序变化。评测集位于 `backend/evals/rag-eval-set.json`，每条样例包含 query、期望命中的来源标题和关键词。
+
+```bash
+cd backend
+npm run eval:rag -- --user-id 1 --top-k 5 --candidate-limit 20
+```
+
+评测脚本会输出：
+
+- `Recall@K`：期望来源或关键词是否出现在 Top-K 结果中。
+- `MRR@K`：第一个相关片段的排名质量。
+- vector、keyword、hybrid 和 hybrid + rerank 的分阶段对比结果。
+- rerank 前后的首个相关片段排名。
+- 每条 query 的命中 source、score、retrieval 类型和 rerank reason。
+
+如果相关片段在候选集中不存在，说明召回阶段需要优化；如果候选集中存在但 rerank 后仍靠后，说明重排策略需要优化；如果检索正确但回答不准确，则需要检查上下文注入和生成阶段。
+
+当前默认评测集包含 15 条围绕周报模板的 query，最新评测结果记录在 `backend/evals/rag-eval-result.md`。该结果用于验证链路可用性和周报模板场景的命中情况，不应描述为大规模生产基准。
 
 ## 技术栈
 

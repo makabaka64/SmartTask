@@ -50,10 +50,17 @@ function parseMetadata(raw) {
 }
 
 async function searchKnowledge(userId, query, limit = 4) {
+  const { results } = await searchKnowledgeWithTrace(userId, query, { limit });
+  return results;
+}
+
+async function searchKnowledgeWithTrace(userId, query, options = {}) {
+  const limit = Number(options.limit) || 4;
   const candidateLimit = Math.max(limit, config.rerank.candidateLimit || 20);
+  const effectiveCandidateLimit = Math.max(candidateLimit, Number(options.candidateLimit) || 0);
   const [vectorResults, keywordResults] = await Promise.all([
-    searchKnowledgeByVector(userId, query, candidateLimit),
-    searchKnowledgeByKeyword(userId, query, candidateLimit),
+    searchKnowledgeByVector(userId, query, effectiveCandidateLimit),
+    searchKnowledgeByKeyword(userId, query, effectiveCandidateLimit),
   ]);
 
   const candidates = mergeKnowledgeCandidates([
@@ -63,13 +70,38 @@ async function searchKnowledge(userId, query, limit = 4) {
 
   if (candidates.length) {
     const reranked = await rerankKnowledge(query, candidates);
-    return reranked.slice(0, limit).map((item) => ({
+    const results = reranked.slice(0, limit).map((item) => ({
       ...item,
       score: Number(Number(item.score).toFixed(4)),
     }));
+
+    return {
+      results,
+      trace: {
+        query,
+        limit,
+        candidateLimit: effectiveCandidateLimit,
+        vectorResults,
+        keywordResults,
+        candidates,
+        reranked,
+      },
+    };
   }
 
-  return searchKnowledgeByKeyword(userId, query, limit);
+  const fallbackResults = await searchKnowledgeByKeyword(userId, query, limit);
+  return {
+    results: fallbackResults,
+    trace: {
+      query,
+      limit,
+      candidateLimit: effectiveCandidateLimit,
+      vectorResults,
+      keywordResults,
+      candidates,
+      reranked: fallbackResults,
+    },
+  };
 }
 
 function getCandidateKey(candidate) {
@@ -231,5 +263,6 @@ function formatKnowledgeContext(results) {
 
 module.exports = {
   searchKnowledge,
+  searchKnowledgeWithTrace,
   formatKnowledgeContext
 };

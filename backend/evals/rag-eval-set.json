@@ -1,0 +1,77 @@
+[
+  {
+    "query": "周报应该包含哪些内容？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["本周工作完成", "现存问题", "下周工作计划"]
+  },
+  {
+    "query": "工作周报开头需要填写什么信息？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["汇报人", "汇报日期"]
+  },
+  {
+    "query": "本周完成的工作应该怎么记录？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["本周工作完成", "工作内容", "完成情况", "备注"]
+  },
+  {
+    "query": "周报里的完成情况放在哪个部分？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["本周工作完成", "完成情况"]
+  },
+  {
+    "query": "本周工作表格有哪些列？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["序号", "工作内容", "完成情况", "备注"]
+  },
+  {
+    "query": "周报中遇到的问题怎么写？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["现存问题", "问题描述", "解决方案", "进展"]
+  },
+  {
+    "query": "现存问题与解决办法应该包含哪些字段？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["现存问题", "问题描述", "解决方案", "进展"]
+  },
+  {
+    "query": "解决方案和进展应该写在哪一栏？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["解决方案", "进展"]
+  },
+  {
+    "query": "下周工作计划应该怎么写？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["下周工作计划", "工作任务", "预期目标", "截止时间"]
+  },
+  {
+    "query": "下周计划表格里需要写截止时间吗？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["下周工作计划", "截止时间"]
+  },
+  {
+    "query": "预期目标应该出现在周报哪个部分？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["下周工作计划", "预期目标"]
+  },
+  {
+    "query": "需要别人帮忙的事项应该写在哪里？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["需协助事项"]
+  },
+  {
+    "query": "周报最后是否有需协助事项？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["需协助事项"]
+  },
+  {
+    "query": "导师要看本周完成、问题和下周计划，应该用哪个模板？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["本周工作完成", "现存问题", "下周工作计划"]
+  },
+  {
+    "query": "项目周报里怎么同时说明完成内容、问题处理和下周安排？",
+    "expectedSources": ["周报模版", "周报模板"],
+    "expectedKeywords": ["本周工作完成", "现存问题", "下周工作计划"]
+  }
+]

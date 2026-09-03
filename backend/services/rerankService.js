@@ -68,7 +68,7 @@ function localRerankKnowledge(query, candidates) {
           candidate.content,
         ].filter(Boolean).join('\n')
       );
-      const normalizedRetrieval = candidate.retrieval === 'vector'
+      const normalizedRetrieval = String(candidate.retrieval || '').startsWith('vector')
         ? Math.max(0, Math.min(1, retrievalScore))
         : Math.max(0, Math.min(1, retrievalScore / 20));
       const rerankScore = normalizeScore((normalizedRetrieval * 0.65 + lexicalScore * 0.35) * 100);

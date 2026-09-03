@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "rebuild:knowledge": "node scripts/rebuildKnowledgeChunks.js",
+    "eval:rag": "node scripts/evaluateRag.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
