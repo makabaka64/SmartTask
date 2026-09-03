@@ -33,6 +33,10 @@ async function ensureAgentRunTable() {
       completed_at DATETIME NULL,
       knowledge_hits LONGTEXT NULL,
       draft_count INT NOT NULL DEFAULT 0,
+      knowledge_hit_count INT NOT NULL DEFAULT 0,
+      tool_call_count INT NOT NULL DEFAULT 0,
+      fallback_count INT NOT NULL DEFAULT 0,
+      duration_ms INT NULL,
       summary TEXT NULL,
       confirmed_task_ids TEXT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -41,9 +45,52 @@ async function ensureAgentRunTable() {
       INDEX idx_agent_run_status (status)
     )
   `);
+  await addColumnIfMissing(
+    'agent_run',
+    'knowledge_hit_count',
+    'ALTER TABLE agent_run ADD COLUMN knowledge_hit_count INT NOT NULL DEFAULT 0 AFTER draft_count'
+  );
+  await addColumnIfMissing(
+    'agent_run',
+    'tool_call_count',
+    'ALTER TABLE agent_run ADD COLUMN tool_call_count INT NOT NULL DEFAULT 0 AFTER knowledge_hit_count'
+  );
+  await addColumnIfMissing(
+    'agent_run',
+    'fallback_count',
+    'ALTER TABLE agent_run ADD COLUMN fallback_count INT NOT NULL DEFAULT 0 AFTER tool_call_count'
+  );
+  await addColumnIfMissing(
+    'agent_run',
+    'duration_ms',
+    'ALTER TABLE agent_run ADD COLUMN duration_ms INT NULL AFTER fallback_count'
+  );
+  await ensureAgentRunEventTable();
 
   schemaReady = true;
   await migrateJsonRunsIfNeeded();
+}
+
+async function addColumnIfMissing(tableName, columnName, alterSql) {
+  const rows = await query(`SHOW COLUMNS FROM ${tableName} LIKE ?`, [columnName]);
+  if (!rows.length) {
+    await query(alterSql);
+  }
+}
+
+async function ensureAgentRunEventTable() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS agent_run_event (
+      id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      run_id VARCHAR(40) NOT NULL,
+      user_id INT NOT NULL,
+      event_type VARCHAR(40) NOT NULL,
+      payload LONGTEXT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_agent_run_event_run (run_id, id),
+      INDEX idx_agent_run_event_user (user_id, created_at)
+    )
+  `);
 }
 
 function parseJson(raw, fallback) {
@@ -78,6 +125,10 @@ function toRun(row) {
     completedAt: toDate(row.completed_at)?.toISOString() || null,
     knowledgeHits: parseJson(row.knowledge_hits, []),
     draftCount: row.draft_count || 0,
+    knowledgeHitCount: row.knowledge_hit_count || 0,
+    toolCallCount: row.tool_call_count || 0,
+    fallbackCount: row.fallback_count || 0,
+    durationMs: row.duration_ms || null,
     summary: row.summary || '',
     confirmedTaskIds: parseJson(row.confirmed_task_ids, []),
   };
@@ -125,7 +176,8 @@ async function listRuns(userId, limit = 12) {
   await ensureAgentRunTable();
   const rows = await query(
     `SELECT id, user_id, agent_type, input, status, started_at, completed_at,
-            knowledge_hits, draft_count, summary, confirmed_task_ids
+            knowledge_hits, draft_count, knowledge_hit_count, tool_call_count,
+            fallback_count, duration_ms, summary, confirmed_task_ids
      FROM agent_run
      WHERE user_id = ?
      ORDER BY started_at DESC, id DESC
@@ -139,7 +191,8 @@ async function getRun(runId, userId) {
   await ensureAgentRunTable();
   const rows = await query(
     `SELECT id, user_id, agent_type, input, status, started_at, completed_at,
-            knowledge_hits, draft_count, summary, confirmed_task_ids
+            knowledge_hits, draft_count, knowledge_hit_count, tool_call_count,
+            fallback_count, duration_ms, summary, confirmed_task_ids
      FROM agent_run
      WHERE id = ? AND user_id = ?
      LIMIT 1`,
@@ -160,6 +213,10 @@ async function createRun({ userId, agentType, input }) {
     completedAt: null,
     knowledgeHits: [],
     draftCount: 0,
+    knowledgeHitCount: 0,
+    toolCallCount: 0,
+    fallbackCount: 0,
+    durationMs: null,
     summary: '',
     confirmedTaskIds: [],
   };
@@ -177,6 +234,10 @@ async function updateRun(runId, patch, userId = null) {
     completedAt: 'completed_at',
     knowledgeHits: 'knowledge_hits',
     draftCount: 'draft_count',
+    knowledgeHitCount: 'knowledge_hit_count',
+    toolCallCount: 'tool_call_count',
+    fallbackCount: 'fallback_count',
+    durationMs: 'duration_ms',
     summary: 'summary',
     confirmedTaskIds: 'confirmed_task_ids',
   };
@@ -204,7 +265,8 @@ async function updateRun(runId, patch, userId = null) {
 
   const rows = await query(
     `SELECT id, user_id, agent_type, input, status, started_at, completed_at,
-            knowledge_hits, draft_count, summary, confirmed_task_ids
+            knowledge_hits, draft_count, knowledge_hit_count, tool_call_count,
+            fallback_count, duration_ms, summary, confirmed_task_ids
      FROM agent_run
      WHERE id = ?${userId ? ' AND user_id = ?' : ''}
      LIMIT 1`,
@@ -215,15 +277,59 @@ async function updateRun(runId, patch, userId = null) {
 
 async function removeRun(runId, userId) {
   await ensureAgentRunTable();
+  await query('DELETE FROM agent_run_event WHERE run_id = ? AND user_id = ?', [runId, userId]);
   const result = await query('DELETE FROM agent_run WHERE id = ? AND user_id = ?', [runId, userId]);
   return result.affectedRows === 1;
 }
 
+async function createRunEvent({ runId, userId, eventType, payload }) {
+  await ensureAgentRunTable();
+  await query(
+    `INSERT INTO agent_run_event (run_id, user_id, event_type, payload)
+     VALUES (?, ?, ?, ?)`,
+    [
+      runId,
+      userId,
+      eventType,
+      JSON.stringify(payload || {}),
+    ]
+  );
+}
+
+async function listRunEvents(runId, userId) {
+  await ensureAgentRunTable();
+  const rows = await query(
+    `SELECT id, run_id, user_id, event_type, payload, created_at
+     FROM agent_run_event
+     WHERE run_id = ? AND user_id = ?
+     ORDER BY id ASC`,
+    [runId, userId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    runId: row.run_id,
+    userId: row.user_id,
+    eventType: row.event_type,
+    payload: (() => {
+      try {
+        return row.payload ? JSON.parse(row.payload) : {};
+      } catch (error) {
+        return {};
+      }
+    })(),
+    createdAt: toDate(row.created_at)?.toISOString() || new Date().toISOString(),
+  }));
+}
+
 module.exports = {
   ensureAgentRunTable,
+  ensureAgentRunEventTable,
   listRuns,
   getRun,
   createRun,
   updateRun,
+  createRunEvent,
+  listRunEvents,
   removeRun,
 };

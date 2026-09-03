@@ -26,8 +26,22 @@ export interface AgentRunLog {
   completedAt: string | null;
   knowledgeHits: AgentKnowledgeHit[];
   draftCount: number;
+  knowledgeHitCount?: number;
+  toolCallCount?: number;
+  fallbackCount?: number;
+  durationMs?: number | null;
   summary: string;
   confirmedTaskIds?: number[];
+  events?: AgentRunEvent[];
+}
+
+export interface AgentRunEvent {
+  id: number;
+  runId: string;
+  userId: number;
+  eventType: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
 }
 
 export interface AgentStreamEventMap {

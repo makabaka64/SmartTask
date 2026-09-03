@@ -51,7 +51,7 @@ Agent 工作流包含：
 
 ### Agent Runtime 设计
 
-项目后端实现了一个轻量 Agent Runtime，将一次 Agent 请求抽象为一次 `run`，统一管理 Agent 类型分发、工具调用、RAG 检索、SSE 事件流、草稿确认和运行记录持久化。
+项目后端实现了一个轻量 Agent Runtime，将一次 Agent 请求抽象为一次 `run`，统一管理 Agent 类型分发、工具调用、RAG 检索、SSE 事件流、草稿确认、运行记录持久化和关键事件 trace。
 
 ```mermaid
 flowchart TD
@@ -79,7 +79,7 @@ flowchart TD
 
 Runtime 执行过程采用 ReAct-like tool calling：模型先根据当前目标判断是否调用工具，后端执行 `get_user_tasks` 或 `search_knowledge`，再把工具结果作为 `tool` message 回填给模型，最后基于收集到的任务和知识上下文生成回答。任务创建采用 human-in-the-loop 方式，Agent 只生成草稿，用户确认后才写入任务表。
 
-SSE 事件包括 `run_started`、`tool_start`、`tool_result`、`knowledge_hits`、`message`、`draft`、`need_confirm`、`done` 和 `error`。前端根据 event name 分发到对应 handler，用于展示运行 ID、工具调用过程、知识命中、任务草稿和最终状态。
+SSE 事件包括 `run_started`、`tool_start`、`tool_result`、`knowledge_hits`、`message`、`draft`、`need_confirm`、`done` 和 `error`。前端根据 event name 分发到对应 handler，用于展示运行 ID、工具调用过程、知识命中、任务草稿和最终状态。后端会持久化除流式 `message` token 外的关键事件，并在 run 上记录 `durationMs`、`toolCallCount`、`knowledgeHitCount` 和 `fallbackCount` 等运行指标，便于历史回看和失败排查。
 
 ## RAG 知识库
 
@@ -269,6 +269,7 @@ CREATE DATABASE smarttask DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_
 Agent 运行记录表会由后端自动创建：
 
 - `agent_run`
+- `agent_run_event`
 
 初始化角色与权限：
 

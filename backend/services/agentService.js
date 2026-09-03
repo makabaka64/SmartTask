@@ -56,6 +56,9 @@ function writeEvent(res, event, data) {
   if (res.destroyed || res.writableEnded) return;
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+  if (event !== "message" && typeof res.locals?.recordAgentEvent === "function") {
+    res.locals.recordAgentEvent(event, data);
+  }
 }
 
 function throwIfAborted(abortSignal) {
@@ -81,6 +84,46 @@ function safeParseJson(raw, fallback = {}) {
   } catch (error) {
     return fallback;
   }
+}
+
+function normalizeDraftText(value, fallback = "") {
+  return String(value || fallback).trim().slice(0, 500);
+}
+
+function normalizePriority(value) {
+  return ["high", "medium", "low"].includes(value) ? value : "medium";
+}
+
+function normalizeDate(value, fallback) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? fallback : date;
+}
+
+function normalizeTaskDrafts(rawTasks) {
+  const base = new Date();
+  return (Array.isArray(rawTasks) ? rawTasks : [])
+    .slice(0, 6)
+    .map((task, index) => {
+      const start = new Date(base);
+      start.setDate(start.getDate() + Number(task.startOffsetDays || index));
+      const end = new Date(start);
+      end.setDate(end.getDate() + Math.max(1, Number(task.durationDays || 2)));
+      const normalizedStart = normalizeDate(task.created_at, start);
+      const normalizedEnd = normalizeDate(task.created_end, end);
+
+      return {
+        name: normalizeDraftText(task.name, `任务 ${index + 1}`),
+        description: normalizeDraftText(task.description, "请补充任务说明"),
+        priority: normalizePriority(task.priority),
+        risk: normalizeDraftText(task.risk),
+        created_at: normalizedStart.toISOString(),
+        created_end: normalizedEnd > normalizedStart
+          ? normalizedEnd.toISOString()
+          : end.toISOString(),
+        status: 0,
+      };
+    })
+    .filter((task) => task.name && task.description);
 }
 
 async function streamTextResponse({ messages, systemPrompt, userPrompt, res, abortSignal }) {
@@ -133,23 +176,8 @@ async function generateTaskDrafts({ input, tasks, abortSignal }) {
   );
 
   const content = response.choices?.[0]?.message?.content || '{"tasks":[]}';
-  const parsed = JSON.parse(content);
-  const base = new Date();
-  return (parsed.tasks || []).map((task, index) => {
-    const start = new Date(base);
-    start.setDate(start.getDate() + Number(task.startOffsetDays || index));
-    const end = new Date(start);
-    end.setDate(end.getDate() + Math.max(1, Number(task.durationDays || 2)));
-    return {
-      name: task.name,
-      description: task.description,
-      priority: task.priority || "medium",
-      risk: task.risk || "",
-      created_at: start.toISOString(),
-      created_end: end.toISOString(),
-      status: 0,
-    };
-  });
+  const parsed = safeParseJson(content, { tasks: [] });
+  return normalizeTaskDrafts(parsed.tasks);
 }
 
 function emitKnowledgeEvents(res, knowledgeResults, emptyMessage) {
@@ -223,6 +251,7 @@ async function executeTaskPlannerTool({
       const knowledgeResults = await searchKnowledge(userId, query, limit);
       throwIfAborted(abortSignal);
       state.knowledgeHits = knowledgeResults;
+      state.knowledgeHitCount += knowledgeResults.length;
       emitKnowledgeEvents(
         res,
         knowledgeResults,
@@ -296,8 +325,10 @@ async function resolveAgentToolCalls({
     tasks: [],
     stats: null,
     knowledgeHits: [],
+    knowledgeHitCount: 0,
   };
   let toolCallCount = 0;
+  let fallbackCount = 0;
 
   const messages = [
     {
@@ -351,6 +382,8 @@ async function resolveAgentToolCalls({
   }
 
   if (toolCallCount === 0) {
+    fallbackCount += 1;
+    toolCallCount += 2;
     writeEvent(res, "tool_result", {
       tool: "agent_fallback",
       message: "模型未主动发起工具调用，已切换为后端兜底上下文收集。",
@@ -395,11 +428,16 @@ async function resolveAgentToolCalls({
     tasks: state.tasks,
     stats: state.stats || summarizeTasks(state.tasks),
     knowledgeHits: state.knowledgeHits,
+    metrics: {
+      toolCallCount,
+      fallbackCount,
+      knowledgeHitCount: state.knowledgeHitCount,
+    },
   };
 }
 
 async function runTaskPlanner({ userId, input, res, abortSignal }) {
-  const { messages, tasks, knowledgeHits } =
+  const { messages, tasks, knowledgeHits, metrics } =
     await resolveAgentToolCalls({
       userId,
       input,
@@ -439,12 +477,13 @@ async function runTaskPlanner({ userId, input, res, abortSignal }) {
     assistantText,
     knowledgeHits,
     draftCount: drafts.length,
+    metrics,
   };
 }
 
 async function runProgressSummary({ userId, input, res, abortSignal }) {
   const goal = input || "任务进展总结";
-  const { messages, knowledgeHits } = await resolveAgentToolCalls({
+  const { messages, knowledgeHits, metrics } = await resolveAgentToolCalls({
     userId,
     input: goal,
     res,
@@ -471,12 +510,13 @@ async function runProgressSummary({ userId, input, res, abortSignal }) {
     assistantText,
     knowledgeHits,
     draftCount: 0,
+    metrics,
   };
 }
 
 async function runWeeklyReport({ userId, input, res, abortSignal }) {
   const goal = input || "周报输出规范";
-  const { messages, knowledgeHits } = await resolveAgentToolCalls({
+  const { messages, knowledgeHits, metrics } = await resolveAgentToolCalls({
     userId,
     input: goal,
     res,
@@ -503,6 +543,7 @@ async function runWeeklyReport({ userId, input, res, abortSignal }) {
     assistantText,
     knowledgeHits,
     draftCount: 0,
+    metrics,
   };
 }
 
