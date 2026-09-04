@@ -183,7 +183,16 @@ npm run rebuild:knowledge
 
 ### RAG 检索评测
 
-项目提供了一个轻量评测脚本，用于检查知识库检索准确性和 rerank 前后的排序变化。评测集位于 `backend/evals/rag-eval-set.json`，每条样例包含 query、期望命中的来源标题和关键词。
+项目提供了一个轻量评测脚本，用于检查知识库检索准确性和 rerank 前后的排序变化。示例知识文档位于 `backend/evals/sample-knowledge-documents.json`，评测集位于 `backend/evals/rag-eval-set.json`。每条样例包含 agentType、query、期望命中的来源标题和关键词，用于验证 task_planner、progress_summary、weekly_report 三类 Agent 场景下能否召回正确私有知识。
+
+导入示例知识文档：
+
+```bash
+cd backend
+npm run seed:rag-eval -- --user-id 1
+```
+
+运行检索评测：
 
 ```bash
 cd backend
@@ -195,12 +204,13 @@ npm run eval:rag -- --user-id 1 --top-k 5 --candidate-limit 20
 - `Recall@K`：期望来源或关键词是否出现在 Top-K 结果中。
 - `MRR@K`：第一个相关片段的排名质量。
 - vector、keyword、hybrid 和 hybrid + rerank 的分阶段对比结果。
+- task_planner、progress_summary 和 weekly_report 的分 Agent 类型指标。
 - rerank 前后的首个相关片段排名。
 - 每条 query 的命中 source、score、retrieval 类型和 rerank reason。
 
 如果相关片段在候选集中不存在，说明召回阶段需要优化；如果候选集中存在但 rerank 后仍靠后，说明重排策略需要优化；如果检索正确但回答不准确，则需要检查上下文注入和生成阶段。
 
-当前默认评测集包含 15 条围绕周报模板的 query，最新评测结果记录在 `backend/evals/rag-eval-result.md`。该结果用于验证链路可用性和周报模板场景的命中情况，不应描述为大规模生产基准。
+当前默认示例数据包含 8 篇 Markdown 知识文档，覆盖周报模板、周报风格、任务拆解、进展总结、项目背景、团队协作风险、研发验收测试和排期优先级；默认评测集包含 42 条 query，按三类 Agent 场景均衡组织。最新评测结果记录在 `backend/evals/rag-eval-result.md`。该结果用于验证链路可用性和小规模多类别知识场景的命中情况，不应描述为大规模生产基准。
 
 ## 技术栈
 

@@ -1,0 +1,83 @@
+[
+  {
+    "title": "周报模板",
+    "category": "weekly_report",
+    "metadata": {
+      "source": "eval-seed",
+      "tags": ["weekly-report", "template"],
+      "agentType": "weekly_report"
+    },
+    "content": "# 工作周报模板\n\n汇报人：\n汇报日期：\n\n## 本周工作完成\n\n本部分记录本周已经完成的任务、阶段性产出、关键进展和完成情况。建议用表格列出序号、工作内容、完成情况和备注。\n\n## 现存问题与解决办法\n\n本部分记录当前阻塞、风险问题、问题描述、解决方案和最新进展。问题需要说明影响范围和是否需要外部协助。\n\n## 下周工作计划\n\n本部分记录下周计划、工作任务、预期目标和截止时间。计划应优先覆盖未完成事项、风险处理和关键里程碑。\n\n## 需协助事项\n\n本部分列出需要导师、同事或项目成员支持的事项，以及希望获得的资源或决策。"
+  },
+  {
+    "title": "任务拆解规范",
+    "category": "task_planner",
+    "metadata": {
+      "source": "eval-seed",
+      "tags": ["task-planning", "agent"],
+      "agentType": "task_planner"
+    },
+    "content": "# 任务拆解规范\n\n## 拆解原则\n\n任务拆解需要把用户目标转换成可执行任务。每个任务应该包含明确标题、具体描述、优先级、开始时间、截止时间和完成标准。\n\n## 粒度控制\n\n复杂目标应拆成 3 到 7 个阶段性任务，避免把调研、开发、测试、上线混在一个任务里。单个任务应该能被一个人理解和推进。\n\n## 优先级规则\n\n优先级分为 high、medium、low。影响主流程、阻塞他人或接近截止时间的任务标记为 high；普通开发、联调和文档整理一般为 medium；可选优化为 low。\n\n## 草稿确认\n\nAgent 只生成任务草稿，不直接写入任务表。用户确认后，后端才会批量创建任务，避免模型生成错误任务直接进入系统。"
+  },
+  {
+    "title": "进展总结规范",
+    "category": "progress_summary",
+    "metadata": {
+      "source": "eval-seed",
+      "tags": ["progress-summary", "risk"],
+      "agentType": "progress_summary"
+    },
+    "content": "# 进展总结规范\n\n## 总结范围\n\n进展总结需要覆盖已完成任务、进行中任务、延期任务、阻塞问题和下一步建议。摘要应该先给整体状态，再说明重点风险。\n\n## 状态归类\n\n已完成任务应总结产出，进行中任务应说明当前进度，延期任务应说明原因和影响，阻塞任务应说明阻塞点、责任人和需要的支持。\n\n## 风险识别\n\n如果任务接近截止时间但未完成，或者依赖其他成员未交付，应标记为延期风险。风险描述需要包含影响范围和建议动作。\n\n## 输出要求\n\n进展总结应该简洁、结构化，优先输出事实和下一步行动，避免只生成泛泛的鼓励性描述。"
+  },
+  {
+    "title": "项目背景与里程碑",
+    "category": "project_context",
+    "metadata": {
+      "source": "eval-seed",
+      "tags": ["project-context", "milestone"],
+      "agentType": "task_planner"
+    },
+    "content": "# 项目背景与里程碑\n\n## 项目目标\n\n当前项目是面向个人或团队的智能任务管理平台，包含任务管理、成员协作、权限控制、Agent 执行流程和 RAG 知识库增强能力。\n\n## 主要模块\n\n核心模块包括任务 CRUD、成员邀请、任务级 RBAC、双 Token 登录刷新、Agent 任务拆解、进展总结、周报生成、SSE 流式输出、运行记录和知识库检索。\n\n## 阶段计划\n\n第一阶段完成基础任务管理和登录认证；第二阶段完成成员协作和权限控制；第三阶段接入 Agent 与 RAG；第四阶段补充评测、trace、异常处理和演示数据。\n\n## 技术约束\n\n前端使用 React、TypeScript 和 Vite，后端使用 Node.js、Express 和 MySQL，向量数据库使用 Qdrant，大模型使用 DeepSeek，Embedding 和 rerank 使用阿里百炼。"
+  },
+  {
+    "title": "团队协作与风险处理规则",
+    "category": "collaboration",
+    "metadata": {
+      "source": "eval-seed",
+      "tags": ["collaboration", "risk"],
+      "agentType": "progress_summary"
+    },
+    "content": "# 团队协作与风险处理规则\n\n## 成员职责\n\n任务负责人负责推进任务和同步进展，协作者负责完成分配事项，管理员负责成员管理、权限调整和关键决策。\n\n## 协作流程\n\n新任务需要明确负责人、截止时间和验收标准。跨成员任务应拆出依赖关系，避免多个成员对同一事项理解不一致。\n\n## 问题升级\n\n如果任务阻塞超过一天，或者依赖资源迟迟不到位，应在进展总结和周报中标记为风险，并列入需协助事项。\n\n## 验收规则\n\n任务完成后需要检查功能结果、文档说明和必要测试。涉及权限、登录、Agent 或 RAG 的改动，需要额外验证异常分支和降级流程。"
+  }
+  ,
+  {
+    "title": "周报风格与受众规范",
+    "category": "weekly_report",
+    "metadata": {
+      "source": "eval-seed",
+      "tags": ["weekly-report", "style", "audience"],
+      "agentType": "weekly_report"
+    },
+    "content": "# 周报风格与受众规范\n\n## 面向导师\n\n给导师看的周报应突出阶段性成果、当前问题、解决思路和下周计划。语气要正式，避免只列流水账。\n\n## 面向团队成员\n\n给团队成员看的周报应突出任务协作、接口依赖、阻塞事项和需要配合的时间点。涉及他人协助时要写清楚责任人和期望完成时间。\n\n## 表达要求\n\n周报内容应该具体、可验证，尽量使用完成了什么、遇到什么问题、下一步做什么这样的结构。不要使用过多空泛描述。\n\n## 风险表述\n\n风险需要说明原因、影响范围、当前处理方案和需要谁协助。如果风险已经解决，也要补充解决结果。"
+  },
+  {
+    "title": "研发验收与测试清单",
+    "category": "quality",
+    "metadata": {
+      "source": "eval-seed",
+      "tags": ["test", "acceptance", "quality"],
+      "agentType": "progress_summary"
+    },
+    "content": "# 研发验收与测试清单\n\n## 接口验收\n\n后端接口需要验证正常请求、参数缺失、权限不足、数据不存在和重复提交等情况。涉及数据库写入的接口需要确认事务和错误返回。\n\n## 前端验收\n\n前端页面需要验证加载态、空状态、错误提示、重复点击、防抖和刷新后的数据一致性。表单需要检查必填项、长度限制和非法输入。\n\n## Agent 验收\n\nAgent 相关功能需要验证模型调用失败、工具调用失败、RAG 没有命中、rerank 不可用、SSE 中断和草稿重复确认等边界情况。\n\n## RAG 验收\n\nRAG 相关功能需要验证 Markdown 切分、embedding 生成、Qdrant 同步、关键词 fallback、rerank 排序和 Recall@K / MRR@K 指标。"
+  },
+  {
+    "title": "排期与优先级规则",
+    "category": "planning",
+    "metadata": {
+      "source": "eval-seed",
+      "tags": ["schedule", "priority", "planning"],
+      "agentType": "task_planner"
+    },
+    "content": "# 排期与优先级规则\n\n## 排期原则\n\n任务排期应优先处理阻塞主流程、影响多人协作或接近截止时间的事项。低风险优化和文档整理可以放在主流程稳定后处理。\n\n## 依赖关系\n\n如果一个任务依赖另一个任务的接口、数据结构或权限配置，需要在任务描述里写清楚前置条件和依赖方。\n\n## 时间估算\n\n单个开发任务建议控制在半天到两天内。超过两天的任务应继续拆分为调研、实现、联调、测试和文档几个阶段。\n\n## 优先级调整\n\n当任务出现阻塞、需求变化或上线风险时，应重新评估优先级，并在进展总结中说明调整原因。"
+  }
+]

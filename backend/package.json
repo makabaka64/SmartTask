@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "rebuild:knowledge": "node scripts/rebuildKnowledgeChunks.js",
+    "seed:rag-eval": "node scripts/seedRagEvalData.js",
     "eval:rag": "node scripts/evaluateRag.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

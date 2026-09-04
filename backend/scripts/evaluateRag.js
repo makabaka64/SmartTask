@@ -90,6 +90,26 @@ function formatHit(hit, index) {
   ].filter(Boolean).join(' | ');
 }
 
+function summarizeRanks(ranks, total) {
+  return {
+    recall: ranks.filter(Boolean).length / total,
+    mrr: ranks.reduce((sum, rank) => sum + (rank ? 1 / rank : 0), 0) / total,
+  };
+}
+
+function pushGroupedRank(groupedStageResults, agentType, stage, rank) {
+  if (!groupedStageResults[agentType]) {
+    groupedStageResults[agentType] = {
+      total: 0,
+      vector: [],
+      keyword: [],
+      hybrid: [],
+      rerank: [],
+    };
+  }
+  groupedStageResults[agentType][stage].push(rank);
+}
+
 function printRankList(title, hits, limit) {
   console.log(title);
   if (!hits.length) {
@@ -111,6 +131,7 @@ async function evaluate() {
     hybrid: [],
     rerank: [],
   };
+  const groupedStageResults = {};
 
   console.log('RAG Evaluation');
   console.log(`User ID: ${args.userId}`);
@@ -129,9 +150,11 @@ async function evaluate() {
     const candidateRank = rankWithinK(trace.candidates, testCase, args.topK);
     const rerankedRank = rankWithinK(topHits, testCase, args.topK);
     const passed = rerankedRank !== null && rerankedRank <= args.topK;
+    const agentType = testCase.agentType || 'unknown';
 
     results.push({
       passed,
+      agentType,
       candidateRank,
       rerankedRank,
       reciprocalRank: rerankedRank ? 1 / rerankedRank : 0,
@@ -140,8 +163,20 @@ async function evaluate() {
     stageResults.keyword.push(keywordRank);
     stageResults.hybrid.push(candidateRank);
     stageResults.rerank.push(rerankedRank);
+    groupedStageResults[agentType] = groupedStageResults[agentType] || {
+      total: 0,
+      vector: [],
+      keyword: [],
+      hybrid: [],
+      rerank: [],
+    };
+    groupedStageResults[agentType].total += 1;
+    pushGroupedRank(groupedStageResults, agentType, 'vector', vectorRank);
+    pushGroupedRank(groupedStageResults, agentType, 'keyword', keywordRank);
+    pushGroupedRank(groupedStageResults, agentType, 'hybrid', candidateRank);
+    pushGroupedRank(groupedStageResults, agentType, 'rerank', rerankedRank);
 
-    console.log(`[${passed ? 'PASS' : 'FAIL'}] #${index + 1} ${testCase.query}`);
+    console.log(`[${passed ? 'PASS' : 'FAIL'}] #${index + 1} [${agentType}] ${testCase.query}`);
     console.log(`Expected sources: ${(testCase.expectedSources || []).join(', ') || '-'}`);
     console.log(`Expected keywords: ${(testCase.expectedKeywords || []).join(', ') || '-'}`);
     console.log(`Vector rank: ${vectorRank || 'not found'}`);
@@ -165,9 +200,18 @@ async function evaluate() {
   console.log('');
   console.log('Stage comparison');
   for (const [stage, ranks] of Object.entries(stageResults)) {
-    const stageRecall = ranks.filter(Boolean).length / total;
-    const stageMrr = ranks.reduce((sum, rank) => sum + (rank ? 1 / rank : 0), 0) / total;
-    console.log(`${stage}: Recall@${args.topK}=${(stageRecall * 100).toFixed(2)}% MRR@${args.topK}=${stageMrr.toFixed(4)}`);
+    const metrics = summarizeRanks(ranks, total);
+    console.log(`${stage}: Recall@${args.topK}=${(metrics.recall * 100).toFixed(2)}% MRR@${args.topK}=${metrics.mrr.toFixed(4)}`);
+  }
+
+  console.log('');
+  console.log('Agent type comparison');
+  for (const [agentType, group] of Object.entries(groupedStageResults)) {
+    console.log(`${agentType} (${group.total} queries)`);
+    for (const stage of ['vector', 'keyword', 'hybrid', 'rerank']) {
+      const metrics = summarizeRanks(group[stage], group.total);
+      console.log(`  ${stage}: Recall@${args.topK}=${(metrics.recall * 100).toFixed(2)}% MRR@${args.topK}=${metrics.mrr.toFixed(4)}`);
+    }
   }
 }
 

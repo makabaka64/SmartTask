@@ -1,77 +1,255 @@
 [
   {
-    "query": "周报应该包含哪些内容？",
-    "expectedSources": ["周报模版", "周报模板"],
+    "agentType": "weekly_report",
+    "query": "根据本周完成的登录刷新、权限联调和两个遗留问题，生成一份项目周报。",
+    "expectedSources": ["周报模板"],
     "expectedKeywords": ["本周工作完成", "现存问题", "下周工作计划"]
   },
   {
-    "query": "工作周报开头需要填写什么信息？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["汇报人", "汇报日期"]
+    "agentType": "weekly_report",
+    "query": "帮我把这周 Agent 和 RAG 的开发进展整理成周报，包含下周安排。",
+    "expectedSources": ["周报模板", "项目背景与里程碑"],
+    "expectedKeywords": ["本周工作完成", "下周工作计划", "阶段计划"]
   },
   {
-    "query": "本周完成的工作应该怎么记录？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["本周工作完成", "工作内容", "完成情况", "备注"]
+    "agentType": "weekly_report",
+    "query": "生成给导师看的周报，重点说明完成内容、风险问题和需要协助的事项。",
+    "expectedSources": ["周报模板", "团队协作与风险处理规则"],
+    "expectedKeywords": ["完成情况", "风险问题", "需协助事项"]
   },
   {
-    "query": "周报里的完成情况放在哪个部分？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["本周工作完成", "完成情况"]
+    "agentType": "weekly_report",
+    "query": "把本周任务管理平台的进度写成周报，需要体现当前阻塞和解决方案。",
+    "expectedSources": ["周报模板"],
+    "expectedKeywords": ["现存问题", "解决方案", "最新进展"]
   },
   {
-    "query": "本周工作表格有哪些列？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["序号", "工作内容", "完成情况", "备注"]
+    "agentType": "weekly_report",
+    "query": "根据任务列表生成周报时，帮我保留下周计划和截止时间。",
+    "expectedSources": ["周报模板"],
+    "expectedKeywords": ["下周工作计划", "预期目标", "截止时间"]
   },
   {
-    "query": "周报中遇到的问题怎么写？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["现存问题", "问题描述", "解决方案", "进展"]
+    "agentType": "weekly_report",
+    "query": "这周权限和成员邀请还有问题，周报里要怎么体现需要别人协助？",
+    "expectedSources": ["周报模板", "团队协作与风险处理规则"],
+    "expectedKeywords": ["需协助事项", "问题升级", "风险"]
   },
   {
-    "query": "现存问题与解决办法应该包含哪些字段？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["现存问题", "问题描述", "解决方案", "进展"]
+    "agentType": "weekly_report",
+    "query": "帮我生成一份包含已完成、进行中、延期风险和下周计划的周报。",
+    "expectedSources": ["周报模板", "进展总结规范"],
+    "expectedKeywords": ["本周工作完成", "延期任务", "下周工作计划"]
   },
   {
-    "query": "解决方案和进展应该写在哪一栏？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["解决方案", "进展"]
+    "agentType": "weekly_report",
+    "query": "按照团队汇报格式，把本周 SmartTask 的开发结果整理成结构化周报。",
+    "expectedSources": ["周报模板", "项目背景与里程碑"],
+    "expectedKeywords": ["工作周报", "主要模块", "阶段计划"]
   },
   {
-    "query": "下周工作计划应该怎么写？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["下周工作计划", "工作任务", "预期目标", "截止时间"]
+    "agentType": "task_planner",
+    "query": "帮我把接入 Qdrant 向量数据库这件事拆成可执行任务。",
+    "expectedSources": ["任务拆解规范", "项目背景与里程碑"],
+    "expectedKeywords": ["可执行任务", "优先级", "截止时间"]
   },
   {
-    "query": "下周计划表格里需要写截止时间吗？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["下周工作计划", "截止时间"]
+    "agentType": "task_planner",
+    "query": "把实现 Agent 运行记录和 trace 展示拆成 5 个任务草稿。",
+    "expectedSources": ["任务拆解规范", "项目背景与里程碑"],
+    "expectedKeywords": ["3 到 7 个", "任务草稿", "运行记录"]
   },
   {
-    "query": "预期目标应该出现在周报哪个部分？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["下周工作计划", "预期目标"]
+    "agentType": "task_planner",
+    "query": "帮我规划登录双 Token 无感刷新的开发、测试和联调任务。",
+    "expectedSources": ["任务拆解规范", "项目背景与里程碑"],
+    "expectedKeywords": ["调研", "开发", "测试", "登录认证"]
   },
   {
-    "query": "需要别人帮忙的事项应该写在哪里？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["需协助事项"]
+    "agentType": "task_planner",
+    "query": "我要完善任务级 RBAC，帮我拆成后端接口、前端页面和验证任务。",
+    "expectedSources": ["任务拆解规范", "项目背景与里程碑"],
+    "expectedKeywords": ["任务级 RBAC", "权限控制", "验收标准"]
   },
   {
-    "query": "周报最后是否有需协助事项？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["需协助事项"]
+    "agentType": "task_planner",
+    "query": "帮我把 RAG 评测脚本的开发拆成几个阶段，并标出优先级。",
+    "expectedSources": ["任务拆解规范"],
+    "expectedKeywords": ["阶段性任务", "优先级", "完成标准"]
   },
   {
-    "query": "导师要看本周完成、问题和下周计划，应该用哪个模板？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["本周工作完成", "现存问题", "下周工作计划"]
+    "agentType": "task_planner",
+    "query": "把成员邀请功能从接口到页面验收拆成任务，不要直接创建，先给草稿。",
+    "expectedSources": ["任务拆解规范", "团队协作与风险处理规则"],
+    "expectedKeywords": ["草稿确认", "用户确认", "验收规则"]
   },
   {
-    "query": "项目周报里怎么同时说明完成内容、问题处理和下周安排？",
-    "expectedSources": ["周报模版", "周报模板"],
-    "expectedKeywords": ["本周工作完成", "现存问题", "下周工作计划"]
+    "agentType": "task_planner",
+    "query": "帮我把上线前异常处理补充工作拆成任务，包含 Agent 和 RAG 的降级验证。",
+    "expectedSources": ["任务拆解规范", "团队协作与风险处理规则"],
+    "expectedKeywords": ["异常分支", "降级流程", "验收规则"]
+  },
+  {
+    "agentType": "task_planner",
+    "query": "我想按四个阶段推进智能任务管理平台，帮我拆出里程碑任务。",
+    "expectedSources": ["项目背景与里程碑", "任务拆解规范"],
+    "expectedKeywords": ["阶段计划", "主要模块", "阶段性任务"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "总结当前项目进展，区分已完成、进行中、延期和阻塞任务。",
+    "expectedSources": ["进展总结规范"],
+    "expectedKeywords": ["已完成任务", "进行中任务", "延期任务", "阻塞问题"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "根据任务状态生成进展总结，并指出哪些任务可能有延期风险。",
+    "expectedSources": ["进展总结规范", "团队协作与风险处理规则"],
+    "expectedKeywords": ["延期风险", "影响范围", "建议动作"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "帮我总结 Agent 与 RAG 模块的当前完成情况和下一步建议。",
+    "expectedSources": ["进展总结规范", "项目背景与里程碑"],
+    "expectedKeywords": ["完成情况", "下一步建议", "Agent", "RAG"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "项目里权限联调被阻塞一天了，生成进展摘要时应该怎么标记？",
+    "expectedSources": ["团队协作与风险处理规则", "进展总结规范"],
+    "expectedKeywords": ["阻塞超过一天", "风险", "需协助事项"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "把这周任务管理、成员协作和知识库三块工作做一个结构化总结。",
+    "expectedSources": ["进展总结规范", "项目背景与里程碑"],
+    "expectedKeywords": ["整体状态", "主要模块", "结构化"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "总结测试验收情况时，需要检查哪些内容？",
+    "expectedSources": ["团队协作与风险处理规则"],
+    "expectedKeywords": ["功能结果", "文档说明", "必要测试"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "帮我输出项目风险摘要，说明影响范围和后续动作。",
+    "expectedSources": ["进展总结规范", "团队协作与风险处理规则"],
+    "expectedKeywords": ["风险描述", "影响范围", "建议动作"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "根据当前任务列表生成一个避免泛泛描述的进展总结。",
+    "expectedSources": ["进展总结规范"],
+    "expectedKeywords": ["事实", "下一步行动", "避免"]
+  },
+  {
+    "agentType": "task_planner",
+    "query": "把前端 SSE 过程展示和后端事件落库拆成开发任务。",
+    "expectedSources": ["任务拆解规范", "项目背景与里程碑"],
+    "expectedKeywords": ["SSE 流式输出", "运行记录", "开发"]
+  },
+  {
+    "agentType": "weekly_report",
+    "query": "根据延期风险和需要支持的事项，补全本周项目周报的问题部分。",
+    "expectedSources": ["周报模板", "团队协作与风险处理规则"],
+    "expectedKeywords": ["现存问题", "需协助事项", "问题升级"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "总结成员协作任务时，如何说明负责人、协作者和管理员的职责？",
+    "expectedSources": ["团队协作与风险处理规则"],
+    "expectedKeywords": ["任务负责人", "协作者", "管理员"]
+  },
+  {
+    "agentType": "task_planner",
+    "query": "帮我把知识库 Markdown 切分、Embedding、Qdrant 同步和 rerank 验证拆成任务。",
+    "expectedSources": ["任务拆解规范", "项目背景与里程碑"],
+    "expectedKeywords": ["Agent 与 RAG", "阶段性任务", "测试"]
+  },
+  {
+    "agentType": "weekly_report",
+    "query": "生成周报时，把第四阶段的评测、trace 和异常处理写进下周计划。",
+    "expectedSources": ["周报模板", "项目背景与里程碑"],
+    "expectedKeywords": ["第四阶段", "评测", "下周工作计划"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "帮我判断上线前还有哪些 Agent 或 RAG 相关任务需要重点验证。",
+    "expectedSources": ["团队协作与风险处理规则", "项目背景与里程碑"],
+    "expectedKeywords": ["Agent", "RAG", "异常分支", "降级流程"]
+  }
+  ,
+  {
+    "agentType": "weekly_report",
+    "query": "给导师生成周报时，帮我把阶段成果、问题原因和下周计划写得正式一点。",
+    "expectedSources": ["周报风格与受众规范", "周报模板"],
+    "expectedKeywords": ["面向导师", "阶段性成果", "下周计划"]
+  },
+  {
+    "agentType": "weekly_report",
+    "query": "我要发给团队成员的周报，需要强调接口依赖和需要配合的时间点。",
+    "expectedSources": ["周报风格与受众规范", "团队协作与风险处理规则"],
+    "expectedKeywords": ["面向团队成员", "接口依赖", "时间点"]
+  },
+  {
+    "agentType": "weekly_report",
+    "query": "这周的风险已经处理完了，生成周报时要补充解决结果。",
+    "expectedSources": ["周报风格与受众规范", "周报模板"],
+    "expectedKeywords": ["风险表述", "解决结果", "处理方案"]
+  },
+  {
+    "agentType": "weekly_report",
+    "query": "帮我把这周工作写成不要太空泛、能验证结果的周报。",
+    "expectedSources": ["周报风格与受众规范"],
+    "expectedKeywords": ["具体", "可验证", "空泛描述"]
+  },
+  {
+    "agentType": "task_planner",
+    "query": "帮我给上线前任务重新排优先级，先处理阻塞主流程的事项。",
+    "expectedSources": ["排期与优先级规则", "任务拆解规范"],
+    "expectedKeywords": ["阻塞主流程", "优先级", "排期原则"]
+  },
+  {
+    "agentType": "task_planner",
+    "query": "把一个预计超过两天的 RAG 优化任务拆成调研、实现、联调和测试。",
+    "expectedSources": ["排期与优先级规则", "任务拆解规范"],
+    "expectedKeywords": ["超过两天", "调研", "实现", "联调", "测试"]
+  },
+  {
+    "agentType": "task_planner",
+    "query": "拆任务时帮我把接口依赖和前置条件写进任务描述。",
+    "expectedSources": ["排期与优先级规则", "任务拆解规范"],
+    "expectedKeywords": ["依赖关系", "前置条件", "任务描述"]
+  },
+  {
+    "agentType": "task_planner",
+    "query": "帮我把前端表单校验、错误提示和重复点击保护拆成验收任务。",
+    "expectedSources": ["研发验收与测试清单", "任务拆解规范"],
+    "expectedKeywords": ["前端验收", "错误提示", "重复点击"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "总结当前验收情况，说明接口哪些异常分支还没有验证。",
+    "expectedSources": ["研发验收与测试清单", "进展总结规范"],
+    "expectedKeywords": ["接口验收", "参数缺失", "权限不足", "数据不存在"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "帮我总结 Agent 边界测试进展，包括模型失败、工具失败和 SSE 中断。",
+    "expectedSources": ["研发验收与测试清单", "进展总结规范"],
+    "expectedKeywords": ["Agent 验收", "模型调用失败", "工具调用失败", "SSE 中断"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "根据当前任务阻塞情况，说明为什么需要调整优先级。",
+    "expectedSources": ["排期与优先级规则", "进展总结规范"],
+    "expectedKeywords": ["优先级调整", "阻塞", "调整原因"]
+  },
+  {
+    "agentType": "progress_summary",
+    "query": "总结 RAG 验收结果时，需要覆盖切分、Qdrant 同步、rerank 和检索指标。",
+    "expectedSources": ["研发验收与测试清单"],
+    "expectedKeywords": ["RAG 验收", "Qdrant 同步", "rerank 排序", "Recall@K"]
   }
 ]
