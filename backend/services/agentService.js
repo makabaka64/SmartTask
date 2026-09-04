@@ -13,6 +13,7 @@ const AGENT_TYPES = {
 
 const MODEL_CALL_TIMEOUT_MS = 60 * 1000;
 const TOOL_CALL_TIMEOUT_MS = 15 * 1000;
+const TOOL_RETRY_LIMIT = 1;
 
 const TASK_PLANNER_TOOLS = [
   {
@@ -143,6 +144,53 @@ function safeParseJson(raw, fallback = {}) {
   } catch (error) {
     return fallback;
   }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeToolLimit(value, fallback = 4, min = 1, max = 6) {
+  const numeric = Number(value);
+  if (!Number.isInteger(numeric)) return fallback;
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function classifyToolError(error) {
+  const code = error?.code || error?.cause?.code || error?.name || "TOOL_ERROR";
+  const message = error?.message || "Tool execution failed";
+  const retryableCodes = new Set([
+    "AbortError",
+    "TimeoutError",
+    "ETIMEDOUT",
+    "ECONNRESET",
+    "ECONNREFUSED",
+    "EAI_AGAIN",
+    "ENOTFOUND",
+  ]);
+
+  return {
+    code: retryableCodes.has(code) ? code : "TOOL_ERROR",
+    message,
+    retryable: retryableCodes.has(code),
+  };
+}
+
+function buildToolErrorResult(toolName, error, attempts) {
+  const classified = classifyToolError(error);
+  return {
+    ok: false,
+    error: {
+      tool: toolName,
+      code: classified.code,
+      message: classified.message,
+      retryable: classified.retryable,
+      attempts,
+      suggestedAction: classified.retryable
+        ? "retry once with simpler arguments, or continue with available context if retry fails"
+        : "continue with available context and tell the user what was unavailable",
+    },
+  };
 }
 
 function normalizeDraftText(value, fallback = "") {
@@ -303,6 +351,7 @@ async function executeTaskPlannerTool({
         message: `已读取 ${stats.total} 条任务，其中 ${stats.completed} 条已完成`,
       });
       return {
+        ok: true,
         stats,
         taskCount: tasks.length,
         tasks: tasks.slice(0, 20).map((task) => ({
@@ -318,7 +367,7 @@ async function executeTaskPlannerTool({
       const query = typeof args.query === "string" && args.query.trim()
         ? args.query.trim()
         : input;
-      const limit = Number.isInteger(args.limit) ? args.limit : 4;
+      const limit = normalizeToolLimit(args.limit);
       writeEvent(res, "tool_start", {
         tool: "search_knowledge",
         message: `模型正在检索相关知识：${query}`,
@@ -339,6 +388,7 @@ async function executeTaskPlannerTool({
         "未命中知识片段，模型将使用通用任务拆解策略",
       );
       return {
+        ok: true,
         query,
         hits: knowledgeResults.map((item) => ({
           source: item.source,
@@ -350,7 +400,14 @@ async function executeTaskPlannerTool({
     }
     default:
       return {
-        error: `Unsupported tool: ${toolCall.function.name}`,
+        ok: false,
+        error: {
+          tool: toolCall.function.name,
+          code: "UNSUPPORTED_TOOL",
+          message: `Unsupported tool: ${toolCall.function.name}`,
+          retryable: false,
+          suggestedAction: "continue without this tool",
+        },
       };
   }
 }
@@ -378,18 +435,49 @@ async function executeAgentTool({
   const toolName = toolCall.function.name;
 
   if (toolName === "get_user_tasks" || toolName === "search_knowledge") {
-    return executeTaskPlannerTool({
-      toolCall,
-      userId,
-      input,
-      res,
-      state,
-      abortSignal,
-    });
+    let lastError = null;
+    let attemptsMade = 0;
+    for (let attempt = 0; attempt <= TOOL_RETRY_LIMIT; attempt += 1) {
+      attemptsMade = attempt + 1;
+      try {
+        return await executeTaskPlannerTool({
+          toolCall,
+          userId,
+          input,
+          res,
+          state,
+          abortSignal,
+        });
+      } catch (error) {
+        lastError = error;
+        throwIfAborted(abortSignal);
+        const classified = classifyToolError(error);
+        const shouldRetry = classified.retryable && attempt < TOOL_RETRY_LIMIT;
+        writeEvent(res, "tool_result", {
+          tool: toolName,
+          message: shouldRetry
+            ? `${toolName} failed: ${classified.message}. Retrying once.`
+            : `${toolName} failed: ${classified.message}`,
+          error: true,
+          retryable: shouldRetry,
+        });
+        if (!shouldRetry) break;
+        await sleep(300 * (attempt + 1));
+      }
+    }
+
+    return buildToolErrorResult(toolName, lastError, attemptsMade);
   }
 
   return {
-    error: `Unsupported tool: ${toolName}`,
+    ok: false,
+    error: {
+      tool: toolName,
+      code: "UNSUPPORTED_TOOL",
+      message: `Unsupported tool: ${toolName}`,
+      retryable: false,
+      suggestedAction: "continue without this tool",
+    },
   };
 }
 
@@ -414,7 +502,12 @@ async function resolveAgentToolCalls({
   const messages = [
     {
       role: "system",
-      content: systemPrompt,
+      content: [
+        systemPrompt,
+        "Tool protocol: tool results may return {ok:false,error:{code,message,retryable,attempts,suggestedAction}}.",
+        "If retryable is true, retry the failed tool at most once with simpler arguments.",
+        "If retry still fails or retryable is false, continue with available context and clearly mention unavailable context when useful.",
+      ].join("\n"),
     },
     {
       role: "user",
