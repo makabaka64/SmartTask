@@ -12,7 +12,7 @@ type StreamAgentRunOptions = {
 function parseSSEChunk(buffer: string, emit: (event: string, data: string) => void) {
   const parts = buffer.split('\n\n');
   const complete = parts.slice(0, -1);
-  const rest = parts.at(-1) || '';
+  const rest = parts[parts.length - 1] || '';
 
   for (const part of complete) {
     const lines = part.split('\n');

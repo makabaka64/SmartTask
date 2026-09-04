@@ -32,7 +32,7 @@ export const store = configureStore({
 // 导出持久化控制器
 export const persistor = persistStore(store)
 // 获取类型
-export type RootState = ReturnType<typeof store.getState>
+export type RootState = ReturnType<typeof rootReducer>
 export type AppDispatch = typeof store.dispatch
 
 export default store

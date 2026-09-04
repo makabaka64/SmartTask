@@ -3,10 +3,12 @@
 
 # Dependencies
 node_modules/
+.pnpm-store/
 
 # Build output
 dist/
 dist-ssr/
+react-vite-ts/.tmp/
 
 # Runtime files
 backend/runtime/agent-runs.json
