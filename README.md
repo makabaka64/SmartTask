@@ -59,25 +59,26 @@ flowchart TD
   B --> C[Create Runtime Run]
   C --> D[Tool Calling Loop]
   D --> E[get_user_tasks Tool]
-  D --> F[search_knowledge Tool]
-  F --> G[RAG Retrieval]
-  G --> H[Qdrant Vector Search]
-  G --> I[Keyword Search]
-  H --> J[Merge + Rerank]
-  I --> J
-  J --> D
-  D --> K[Stream Model Output]
-  K --> L[SSE Event Stream]
-  L --> M[Frontend Runtime Console]
-  K --> N[Generate Draft Tasks]
-  N --> O[Human Confirmation]
-  O --> P[Write Tasks]
-  C --> Q[Run Log Persistence]
-  K --> Q
-  O --> Q
+  D --> F[get_task_stats Tool]
+  D --> G[search_knowledge Tool]
+  G --> H[RAG Retrieval]
+  H --> I[Qdrant Vector Search]
+  H --> J[Keyword Search]
+  I --> K[Merge + Rerank]
+  J --> K
+  K --> D
+  D --> L[Stream Model Output]
+  L --> M[SSE Event Stream]
+  M --> N[Frontend Runtime Console]
+  L --> O[Generate Draft Tasks]
+  O --> P[Human Confirmation]
+  P --> Q[Write Tasks]
+  C --> R[Run Log Persistence]
+  L --> R
+  P --> R
 ```
 
-Runtime 执行过程采用 ReAct-like tool calling：模型先根据当前目标判断是否调用工具，后端执行 `get_user_tasks` 或 `search_knowledge`，再把工具结果作为 `tool` message 回填给模型，最后基于收集到的任务和知识上下文生成回答。任务创建采用 human-in-the-loop 方式，Agent 只生成草稿，用户确认后才写入任务表。
+Runtime 执行过程采用 ReAct-like tool calling：模型先根据当前目标判断是否调用工具，后端执行 `get_user_tasks`、`get_task_stats` 或 `search_knowledge`，再把工具结果作为 `tool` message 回填给模型，最后基于收集到的任务明细、任务统计和知识上下文生成回答。任务创建采用 human-in-the-loop 方式，Agent 只生成草稿，用户确认后才写入任务表。
 
 SSE 事件包括 `run_started`、`tool_start`、`tool_result`、`knowledge_hits`、`message`、`draft`、`need_confirm`、`done` 和 `error`。前端根据 event name 分发到对应 handler，用于展示运行 ID、工具调用过程、知识命中、任务草稿和最终状态。后端会持久化除流式 `message` token 外的关键事件，并在 run 上记录 `durationMs`、`toolCallCount`、`knowledgeHitCount` 和 `fallbackCount` 等运行指标，运行详情页可查看 metrics 与 event trace，便于历史回看和失败排查。
 

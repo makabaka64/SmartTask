@@ -66,9 +66,22 @@ async function getUserTasks(userId) {
 
 function summarizeTasks(tasks) {
   const now = Date.now();
+  const completed = tasks.filter((task) => task.status === 1).length;
+  const priorityDistribution = tasks.reduce(
+    (acc, task) => {
+      const priority = ['high', 'medium', 'low'].includes(task.priority)
+        ? task.priority
+        : 'unspecified';
+      acc[priority] += 1;
+      return acc;
+    },
+    { high: 0, medium: 0, low: 0, unspecified: 0 }
+  );
+
   return {
     total: tasks.length,
-    completed: tasks.filter((task) => task.status === 1).length,
+    completed,
+    pending: tasks.length - completed,
     overdue: tasks.filter((task) => task.status !== 1 && new Date(task.created_end).getTime() < now).length,
     inProgress: tasks.filter((task) => {
       if (task.status === 1) return false;
@@ -76,7 +89,8 @@ function summarizeTasks(tasks) {
       const end = new Date(task.created_end).getTime();
       return start <= now && now <= end;
     }).length,
-    upcoming: tasks.filter((task) => task.status !== 1 && new Date(task.created_at).getTime() > now).length
+    upcoming: tasks.filter((task) => task.status !== 1 && new Date(task.created_at).getTime() > now).length,
+    priorityDistribution
   };
 }
 

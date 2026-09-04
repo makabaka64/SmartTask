@@ -32,6 +32,19 @@ const TASK_PLANNER_TOOLS = [
   {
     type: "function",
     function: {
+      name: "get_task_stats",
+      description:
+        "Read aggregate task statistics including totals, completed, pending, in-progress, overdue, upcoming, and priority distribution.",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "search_knowledge",
       description:
         "Search the user's personal knowledge base for planning constraints, project docs, or review notes relevant to the current goal.",
@@ -363,6 +376,33 @@ async function executeTaskPlannerTool({
         })),
       };
     }
+    case "get_task_stats": {
+      writeEvent(res, "tool_start", {
+        tool: "get_task_stats",
+        message: "模型正在读取任务统计指标",
+      });
+      throwIfAborted(abortSignal);
+      const tasks = state.tasks.length
+        ? state.tasks
+        : await withTimeout(
+            () => getUserTasks(userId),
+            TOOL_CALL_TIMEOUT_MS,
+            "get_task_stats",
+            abortSignal,
+          );
+      throwIfAborted(abortSignal);
+      const stats = summarizeTasks(tasks);
+      state.tasks = tasks;
+      state.stats = stats;
+      writeEvent(res, "tool_result", {
+        tool: "get_task_stats",
+        message: `任务统计：共 ${stats.total} 条，已完成 ${stats.completed} 条，进行中 ${stats.inProgress} 条，逾期 ${stats.overdue} 条`,
+      });
+      return {
+        ok: true,
+        stats,
+      };
+    }
     case "search_knowledge": {
       const query = typeof args.query === "string" && args.query.trim()
         ? args.query.trim()
@@ -434,7 +474,7 @@ async function executeAgentTool({
   throwIfAborted(abortSignal);
   const toolName = toolCall.function.name;
 
-  if (toolName === "get_user_tasks" || toolName === "search_knowledge") {
+  if (toolName === "get_user_tasks" || toolName === "get_task_stats" || toolName === "search_knowledge") {
     let lastError = null;
     let attemptsMade = 0;
     for (let attempt = 0; attempt <= TOOL_RETRY_LIMIT; attempt += 1) {
@@ -563,7 +603,7 @@ async function resolveAgentToolCalls({
 
   if (toolCallCount === 0) {
     fallbackCount += 1;
-    toolCallCount += 2;
+    toolCallCount += 3;
     writeEvent(res, "tool_result", {
       tool: "agent_fallback",
       message: "模型未主动发起工具调用，已切换为后端兜底上下文收集。",
@@ -582,6 +622,21 @@ async function resolveAgentToolCalls({
       role: "tool",
       tool_call_id: fallbackTaskCall.id,
       content: JSON.stringify(taskResult),
+    });
+
+    const fallbackStatsCall = createToolCall("get_task_stats");
+    const statsResult = await executeAgentTool({
+      toolCall: fallbackStatsCall,
+      userId,
+      input,
+      res,
+      state,
+      abortSignal,
+    });
+    messages.push({
+      role: "tool",
+      tool_call_id: fallbackStatsCall.id,
+      content: JSON.stringify(statsResult),
     });
 
     const fallbackKnowledgeCall = createToolCall("search_knowledge", {
@@ -623,7 +678,7 @@ async function runTaskPlanner({ userId, input, res, abortSignal }) {
       input,
       res,
       systemPrompt:
-        "You are an execution-oriented task planning agent. Before answering, always call get_user_tasks. If the goal may benefit from personal notes, project docs, or review constraints, call search_knowledge. After enough context is collected, stop calling tools.",
+        "You are an execution-oriented task planning agent. Before answering, always call get_user_tasks. If existing workload, overdue tasks, or priority distribution may affect planning, call get_task_stats. If the goal may benefit from personal notes, project docs, or review constraints, call search_knowledge. After enough context is collected, stop calling tools.",
       userPrompt: `用户目标：${input}\n请先通过工具收集足够上下文，再给出简洁中文说明。`,
       abortSignal,
     });
@@ -668,7 +723,7 @@ async function runProgressSummary({ userId, input, res, abortSignal }) {
     input: goal,
     res,
     systemPrompt:
-      "You are a project progress assistant. Always call get_user_tasks first to understand the current workload. If relevant project context, norms, or reporting constraints may help, call search_knowledge. Stop calling tools after you have enough context to summarize progress.",
+      "You are a project progress assistant. Always call get_user_tasks and get_task_stats first to understand task details and aggregate progress. If relevant project context, norms, or reporting constraints may help, call search_knowledge. Stop calling tools after you have enough context to summarize progress.",
     userPrompt: `补充说明：${goal}\n请先通过工具收集任务与知识上下文，再输出中文进展总结。`,
     abortSignal,
   });
@@ -701,7 +756,7 @@ async function runWeeklyReport({ userId, input, res, abortSignal }) {
     input: goal,
     res,
     systemPrompt:
-      "You are a weekly report assistant. Always call get_user_tasks first. If reporting templates, project context, or delivery norms may help, call search_knowledge. Stop calling tools after you have enough context to prepare the weekly report.",
+      "You are a weekly report assistant. Always call get_user_tasks and get_task_stats first. If reporting templates, project context, or delivery norms may help, call search_knowledge. Stop calling tools after you have enough context to prepare the weekly report.",
     userPrompt: `额外要求：${goal}\n请先通过工具收集周报所需上下文，再输出中文周报。`,
     abortSignal,
   });
