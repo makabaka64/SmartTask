@@ -69,13 +69,19 @@ const TASK_PLANNER_TOOLS = [
   },
 ];
 
-function writeEvent(res, event, data) {
+async function writeEvent(res, event, data) {
   if (res.destroyed || res.writableEnded) return;
+  let eventId = null;
+  if (typeof res.locals?.recordAgentEvent === "function") {
+    const savedEvent = await res.locals.recordAgentEvent(event, data);
+    eventId = savedEvent?.id || null;
+  }
+  if (res.destroyed || res.writableEnded) return;
+  if (eventId) {
+    res.write(`id: ${eventId}\n`);
+  }
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
-  if (event !== "message" && typeof res.locals?.recordAgentEvent === "function") {
-    res.locals.recordAgentEvent(event, data);
-  }
 }
 
 function throwIfAborted(abortSignal) {
@@ -275,7 +281,7 @@ async function streamTextResponse({ messages, systemPrompt, userPrompt, res, abo
     const delta = chunk.choices?.[0]?.delta?.content;
     if (!delta) continue;
     fullText += delta;
-    writeEvent(res, "message", { chunk: delta });
+    await writeEvent(res, "message", { chunk: delta });
   }
   return fullText;
 }
@@ -312,8 +318,8 @@ async function generateTaskDrafts({ input, tasks, abortSignal }) {
   return normalizeTaskDrafts(parsed.tasks);
 }
 
-function emitKnowledgeEvents(res, knowledgeResults, emptyMessage) {
-  writeEvent(res, "tool_result", {
+async function emitKnowledgeEvents(res, knowledgeResults, emptyMessage) {
+  await writeEvent(res, "tool_result", {
     tool: "search_knowledge",
     message: knowledgeResults.length
       ? `命中 ${knowledgeResults.length} 条知识片段：${knowledgeResults.map((item) => item.source).join("、")}`
@@ -321,7 +327,7 @@ function emitKnowledgeEvents(res, knowledgeResults, emptyMessage) {
   });
 
   if (knowledgeResults.length) {
-    writeEvent(res, "knowledge_hits", {
+    await writeEvent(res, "knowledge_hits", {
       hits: knowledgeResults.map((item) => ({
         source: item.source,
         content: item.content,
@@ -344,7 +350,7 @@ async function executeTaskPlannerTool({
 
   switch (toolCall.function.name) {
     case "get_user_tasks": {
-      writeEvent(res, "tool_start", {
+      await writeEvent(res, "tool_start", {
         tool: "get_user_tasks",
         message: "模型正在读取当前用户任务上下文",
       });
@@ -359,7 +365,7 @@ async function executeTaskPlannerTool({
       const stats = summarizeTasks(tasks);
       state.tasks = tasks;
       state.stats = stats;
-      writeEvent(res, "tool_result", {
+      await writeEvent(res, "tool_result", {
         tool: "get_user_tasks",
         message: `已读取 ${stats.total} 条任务，其中 ${stats.completed} 条已完成`,
       });
@@ -377,7 +383,7 @@ async function executeTaskPlannerTool({
       };
     }
     case "get_task_stats": {
-      writeEvent(res, "tool_start", {
+      await writeEvent(res, "tool_start", {
         tool: "get_task_stats",
         message: "模型正在读取任务统计指标",
       });
@@ -394,7 +400,7 @@ async function executeTaskPlannerTool({
       const stats = summarizeTasks(tasks);
       state.tasks = tasks;
       state.stats = stats;
-      writeEvent(res, "tool_result", {
+      await writeEvent(res, "tool_result", {
         tool: "get_task_stats",
         message: `任务统计：共 ${stats.total} 条，已完成 ${stats.completed} 条，进行中 ${stats.inProgress} 条，逾期 ${stats.overdue} 条`,
       });
@@ -408,7 +414,7 @@ async function executeTaskPlannerTool({
         ? args.query.trim()
         : input;
       const limit = normalizeToolLimit(args.limit);
-      writeEvent(res, "tool_start", {
+      await writeEvent(res, "tool_start", {
         tool: "search_knowledge",
         message: `模型正在检索相关知识：${query}`,
       });
@@ -422,7 +428,7 @@ async function executeTaskPlannerTool({
       throwIfAborted(abortSignal);
       state.knowledgeHits = knowledgeResults;
       state.knowledgeHitCount += knowledgeResults.length;
-      emitKnowledgeEvents(
+      await emitKnowledgeEvents(
         res,
         knowledgeResults,
         "未命中知识片段，模型将使用通用任务拆解策略",
@@ -493,7 +499,7 @@ async function executeAgentTool({
         throwIfAborted(abortSignal);
         const classified = classifyToolError(error);
         const shouldRetry = classified.retryable && attempt < TOOL_RETRY_LIMIT;
-        writeEvent(res, "tool_result", {
+        await writeEvent(res, "tool_result", {
           tool: toolName,
           message: shouldRetry
             ? `${toolName} failed: ${classified.message}. Retrying once.`
@@ -604,7 +610,7 @@ async function resolveAgentToolCalls({
   if (toolCallCount === 0) {
     fallbackCount += 1;
     toolCallCount += 3;
-    writeEvent(res, "tool_result", {
+    await writeEvent(res, "tool_result", {
       tool: "agent_fallback",
       message: "模型未主动发起工具调用，已切换为后端兜底上下文收集。",
     });
@@ -703,8 +709,8 @@ async function runTaskPlanner({ userId, input, res, abortSignal }) {
     abortSignal,
   });
   throwIfAborted(abortSignal);
-  writeEvent(res, "draft", { drafts });
-  writeEvent(res, "need_confirm", {
+  await writeEvent(res, "draft", { drafts });
+  await writeEvent(res, "need_confirm", {
     message: "已生成任务草案，确认后将写入任务系统。",
   });
 

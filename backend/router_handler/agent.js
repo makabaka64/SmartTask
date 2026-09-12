@@ -7,6 +7,7 @@ const {
   listRuns,
   getRun,
   listRunEvents,
+  listRunEventsAfter,
   removeRun
 } = require('../services/agentRunLogService');
 
@@ -85,6 +86,13 @@ function checkAgentRateLimit(userId) {
   return true;
 }
 
+function writeStoredEvent(res, event) {
+  if (res.destroyed || res.writableEnded) return;
+  res.write(`id: ${event.id}\n`);
+  res.write(`event: ${event.eventType}\n`);
+  res.write(`data: ${JSON.stringify(event.payload || {})}\n\n`);
+}
+
 exports.streamAgent = async (req, res) => {
   res.set({
     'Content-Type': 'text/event-stream',
@@ -107,17 +115,17 @@ exports.streamAgent = async (req, res) => {
     const agentType = normalizeAgentType(req.body.agentType);
 
     if (!input) {
-      writeEvent(res, 'error', { message: 'Agent 输入不能为空' });
+      await writeEvent(res, 'error', { message: 'Agent 输入不能为空' });
       responseFinished = true;
       return res.end();
     }
     if (input.length > MAX_AGENT_INPUT_LENGTH) {
-      writeEvent(res, 'error', { message: `Agent 输入不能超过 ${MAX_AGENT_INPUT_LENGTH} 个字符` });
+      await writeEvent(res, 'error', { message: `Agent 输入不能超过 ${MAX_AGENT_INPUT_LENGTH} 个字符` });
       responseFinished = true;
       return res.end();
     }
     if (!checkAgentRateLimit(req.user.id)) {
-      writeEvent(res, 'error', { message: 'Agent 请求过于频繁，请稍后再试' });
+      await writeEvent(res, 'error', { message: 'Agent 请求过于频繁，请稍后再试' });
       responseFinished = true;
       return res.end();
     }
@@ -130,17 +138,18 @@ exports.streamAgent = async (req, res) => {
 
     const startedAtMs = Date.now();
     res.locals.recordAgentEvent = (eventType, payload) => {
-      createRunEvent({
+      return createRunEvent({
         runId: run.id,
         userId: req.user.id,
         eventType,
         payload
       }).catch((error) => {
         console.warn('record agent event failed:', error.message);
+        return null;
       });
     };
 
-    writeEvent(res, 'run_started', {
+    await writeEvent(res, 'run_started', {
       runId: run.id,
       startedAt: run.startedAt
     });
@@ -169,7 +178,7 @@ exports.streamAgent = async (req, res) => {
       summary: result.assistantText.slice(0, 800)
     }, req.user.id);
 
-    writeEvent(res, 'done', {
+    await writeEvent(res, 'done', {
       ok: true,
       runId: run.id,
       draftCount: result.draftCount
@@ -186,7 +195,7 @@ exports.streamAgent = async (req, res) => {
           durationMs: durationSince(run.startedAt),
           summary: 'Agent execution cancelled by client'
         }, req.user.id);
-        res.locals.recordAgentEvent?.('cancelled', { runId: run.id });
+        await res.locals.recordAgentEvent?.('cancelled', { runId: run.id });
       }
       responseFinished = true;
       if (!res.destroyed && !res.writableEnded) {
@@ -204,7 +213,7 @@ exports.streamAgent = async (req, res) => {
         summary: error.message || 'Agent execution failed'
       }, req.user.id);
     }
-    writeEvent(res, 'error', {
+    await writeEvent(res, 'error', {
       message: error.message || 'Agent 执行失败',
       runId: run?.id
     });
@@ -307,6 +316,37 @@ exports.getRunDetail = async (req, res) => {
     });
   } catch (error) {
     res.cc(error);
+  }
+};
+
+exports.streamRunEvents = async (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive'
+  });
+
+  try {
+    const runId = req.params.id;
+    const lastEventId = Number(req.query.lastEventId || req.headers['last-event-id'] || 0) || 0;
+    const run = await getRun(runId, req.user.id);
+
+    if (!run) {
+      res.write('event: error\n');
+      res.write(`data: ${JSON.stringify({ message: '运行记录不存在或无权限恢复' })}\n\n`);
+      return res.end();
+    }
+
+    const events = await listRunEventsAfter(runId, req.user.id, lastEventId);
+    events.forEach((event) => writeStoredEvent(res, event));
+    res.write('event: replay_done\n');
+    res.write(`data: ${JSON.stringify({ runId, status: run.status, replayed: events.length })}\n\n`);
+    res.end();
+  } catch (error) {
+    console.error('stream run events failed:', error);
+    res.write('event: error\n');
+    res.write(`data: ${JSON.stringify({ message: error.message || '恢复 Agent 事件失败' })}\n\n`);
+    res.end();
   }
 };
 

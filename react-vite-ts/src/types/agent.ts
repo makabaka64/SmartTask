@@ -54,6 +54,7 @@ export interface AgentStreamEventMap {
   need_confirm: { message: string };
   done: { ok: boolean; runId: string; draftCount: number };
   error: { message: string; runId?: string };
+  replay_done: { runId: string; status: AgentRunLog['status']; replayed: number };
 }
 
 export interface AgentMessage {

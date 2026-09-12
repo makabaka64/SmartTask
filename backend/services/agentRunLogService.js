@@ -284,7 +284,7 @@ async function removeRun(runId, userId) {
 
 async function createRunEvent({ runId, userId, eventType, payload }) {
   await ensureAgentRunTable();
-  await query(
+  const result = await query(
     `INSERT INTO agent_run_event (run_id, user_id, event_type, payload)
      VALUES (?, ?, ?, ?)`,
     [
@@ -294,6 +294,14 @@ async function createRunEvent({ runId, userId, eventType, payload }) {
       JSON.stringify(payload || {}),
     ]
   );
+  return {
+    id: result.insertId,
+    runId,
+    userId,
+    eventType,
+    payload: payload || {},
+    createdAt: new Date().toISOString(),
+  };
 }
 
 async function listRunEvents(runId, userId) {
@@ -322,6 +330,32 @@ async function listRunEvents(runId, userId) {
   }));
 }
 
+async function listRunEventsAfter(runId, userId, lastEventId = 0) {
+  await ensureAgentRunTable();
+  const rows = await query(
+    `SELECT id, run_id, user_id, event_type, payload, created_at
+     FROM agent_run_event
+     WHERE run_id = ? AND user_id = ? AND id > ?
+     ORDER BY id ASC`,
+    [runId, userId, Number(lastEventId) || 0]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    runId: row.run_id,
+    userId: row.user_id,
+    eventType: row.event_type,
+    payload: (() => {
+      try {
+        return row.payload ? JSON.parse(row.payload) : {};
+      } catch (error) {
+        return {};
+      }
+    })(),
+    createdAt: toDate(row.created_at)?.toISOString() || new Date().toISOString(),
+  }));
+}
+
 module.exports = {
   ensureAgentRunTable,
   ensureAgentRunEventTable,
@@ -331,5 +365,6 @@ module.exports = {
   updateRun,
   createRunEvent,
   listRunEvents,
+  listRunEventsAfter,
   removeRun,
 };

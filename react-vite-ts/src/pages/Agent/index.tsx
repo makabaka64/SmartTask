@@ -5,7 +5,7 @@ import { useDispatch } from 'react-redux';
 import { fetchTaskList } from '@/store/modules/taskSlice';
 import type { AppDispatch } from '@/store';
 import type { AgentMessage, AgentRunLog, AgentType } from '@/types/agent';
-import { streamAgentRun } from '@/services/agentStreamService';
+import { resumeAgentRunEvents, streamAgentRun } from '@/services/agentStreamService';
 import {
   confirmAgentDrafts,
   deleteAgentRun,
@@ -99,12 +99,14 @@ const AgentPage = () => {
   const [recentRuns, setRecentRuns] = useState<AgentRunLog[]>([]);
   const [selectedRun, setSelectedRun] = useState<AgentRunLog | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [currentRunId, setCurrentRunId] = useState<string>();
   const [isRunning, setIsRunning] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const assistantChunkBufferRef = useRef('');
   const assistantFlushTimerRef = useRef<number | null>(null);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
+  const currentRunIdRef = useRef<string | undefined>(undefined);
+  const lastEventIdRef = useRef(0);
+  const appliedEventIdsRef = useRef<Set<number>>(new Set());
   const isMountedRef = useRef(true);
 
   const latestDraftMessage = useMemo(
@@ -150,7 +152,7 @@ const AgentPage = () => {
       if (last?.role === 'assistant' && last.status === 'pending') {
         return [...prev.slice(0, -1), { ...last, content: last.content + content }];
       }
-      return [...prev, createMessage('assistant', content, { status: 'pending', runId: currentRunId })];
+      return [...prev, createMessage('assistant', content, { status: 'pending', runId: currentRunIdRef.current })];
     });
   };
 
@@ -186,59 +188,107 @@ const AgentPage = () => {
     });
   };
 
+  const applyStreamEvent = (meta: { id?: number }, apply: () => void) => {
+    if (meta.id !== undefined) {
+      if (appliedEventIdsRef.current.has(meta.id)) return;
+      appliedEventIdsRef.current.add(meta.id);
+      lastEventIdRef.current = Math.max(lastEventIdRef.current, meta.id);
+    }
+    apply();
+  };
+
   const handleRun = async () => {
     if (!input.trim() || isRunning) return;
     streamAbortControllerRef.current?.abort();
     const abortController = new AbortController();
     streamAbortControllerRef.current = abortController;
     setIsRunning(true);
-    setCurrentRunId(undefined);
+    currentRunIdRef.current = undefined;
+    lastEventIdRef.current = 0;
+    appliedEventIdsRef.current = new Set();
     assistantChunkBufferRef.current = '';
     setMessages((prev) => [...prev, createMessage('user', input)]);
+
+    const handlers = {
+      run_started: ({ runId }: { runId: string; startedAt: string }, meta: { id?: number }) =>
+        applyStreamEvent(meta, () => {
+          currentRunIdRef.current = runId;
+          setMessages((prev) => [...prev, createMessage('system', `本次运行 ID：${runId}`, { runId })]);
+        }),
+      message: ({ chunk }: { chunk: string }, meta: { id?: number }) =>
+        applyStreamEvent(meta, () => appendAssistantChunk(chunk)),
+      tool_start: ({ message }: { tool: string; message: string }, meta: { id?: number }) =>
+        applyStreamEvent(meta, () =>
+          setMessages((prev) => [
+            ...prev,
+            createMessage('tool', `开始执行：${message}`, { runId: currentRunIdRef.current })
+          ])
+        ),
+      tool_result: ({ message }: { tool: string; message: string }, meta: { id?: number }) =>
+        applyStreamEvent(meta, () =>
+          setMessages((prev) => [
+            ...prev,
+            createMessage('tool', `执行结果：${message}`, { runId: currentRunIdRef.current })
+          ])
+        ),
+      knowledge_hits: ({ hits }: { hits: any[] }, meta: { id?: number }) =>
+        applyStreamEvent(meta, () =>
+          setMessages((prev) => [
+            ...prev,
+            createMessage('system', `命中 ${hits.length} 条知识片段`, {
+              runId: currentRunIdRef.current,
+              knowledgeHits: hits
+            })
+          ])
+        ),
+      draft: ({ drafts }: { drafts: any[] }, meta: { id?: number }) =>
+        applyStreamEvent(meta, () =>
+          setMessages((prev) => [
+            ...prev,
+            createMessage('draft', '已生成任务草稿，请确认后写入任务系统。', {
+              drafts,
+              status: 'ready',
+              runId: currentRunIdRef.current
+            })
+          ])
+        ),
+      need_confirm: ({ message }: { message: string }, meta: { id?: number }) =>
+        applyStreamEvent(meta, () =>
+          setMessages((prev) => [...prev, createMessage('system', message, { runId: currentRunIdRef.current })])
+        ),
+      error: ({ message, runId }: { message: string; runId?: string }, meta: { id?: number }) =>
+        applyStreamEvent(meta, () => setMessages((prev) => [...prev, createMessage('error', message, { runId })])),
+      done: (_payload: unknown, meta: { id?: number }) => applyStreamEvent(meta, finalizeAssistantMessage),
+      replay_done: () => undefined
+    };
 
     try {
       await streamAgentRun(
         agentType,
         input,
-        {
-          run_started: ({ runId }) => {
-            setCurrentRunId(runId);
-            setMessages((prev) => [...prev, createMessage('system', `本次运行 ID：${runId}`, { runId })]);
-          },
-          message: ({ chunk }) => appendAssistantChunk(chunk),
-          tool_start: ({ message }) =>
-            setMessages((prev) => [...prev, createMessage('tool', `开始执行：${message}`, { runId: currentRunId })]),
-          tool_result: ({ message }) =>
-            setMessages((prev) => [...prev, createMessage('tool', `执行结果：${message}`, { runId: currentRunId })]),
-          knowledge_hits: ({ hits }) =>
-            setMessages((prev) => [
-              ...prev,
-              createMessage('system', `命中 ${hits.length} 条知识片段`, {
-                runId: currentRunId,
-                knowledgeHits: hits
-              })
-            ]),
-          draft: ({ drafts }) =>
-            setMessages((prev) => [
-              ...prev,
-              createMessage('draft', '已生成任务草案，请确认后写入任务系统。', {
-                drafts,
-                status: 'ready',
-                runId: currentRunId
-              })
-            ]),
-          need_confirm: ({ message }) =>
-            setMessages((prev) => [...prev, createMessage('system', message, { runId: currentRunId })]),
-          error: ({ message, runId }) =>
-            setMessages((prev) => [...prev, createMessage('error', message, { runId })]),
-          done: () => finalizeAssistantMessage()
-        },
+        handlers,
         { signal: abortController.signal }
       );
     } catch (error) {
       flushAssistantBuffer();
       if (abortController.signal.aborted) return;
       console.error(error);
+      const recoverRunId = currentRunIdRef.current;
+      if (recoverRunId) {
+        try {
+          setMessages((prev) => [
+            ...prev,
+            createMessage('system', '连接中断，正在恢复已保存的事件。', { runId: recoverRunId })
+          ]);
+          await resumeAgentRunEvents(recoverRunId, lastEventIdRef.current, handlers, {
+            signal: abortController.signal
+          });
+          flushAssistantBuffer();
+          return;
+        } catch (recoverError) {
+          console.error(recoverError);
+        }
+      }
       setMessages((prev) => [...prev, createMessage('error', 'Agent 执行失败，请检查服务或重试。')]);
     } finally {
       flushAssistantBuffer();
